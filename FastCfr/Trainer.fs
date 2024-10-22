@@ -2,14 +2,14 @@
 
 open MathNet.Numerics.LinearAlgebra
 
-type GameState =
+type GameState<'action> =
     {
-        IsTerminal : bool
+        /// If the game is over, payoff for the first player.
         TerminalValueOpt : Option<float>
-        LegalActions : int[]
+        LegalActions : 'action[]
         InfoSetKey : string
         ActivePlayerIdx : int
-        AddAction : int -> GameState
+        AddAction : 'action -> GameState<'action>
     }
 
 module Trainer =
@@ -33,17 +33,11 @@ module Trainer =
                     x * actionProb
                 else x)
 
-    /// Negates opponent's utilties (assuming a zero-zum game).
-    let private getActiveUtilities utilities =
-        utilities
-            |> Seq.map (~-)
-            |> DenseVector.ofSeq
-
     let private numPlayers = 2
 
     /// Evaluates the utility of the given game state via counter-
     /// factual regret minimization.
-    let private cfr infoSetMap (state : GameState) =
+    let private cfr infoSetMap state =
 
         /// Top-level CFR loop.
         let rec loop state reachProbs =
@@ -54,7 +48,7 @@ module Trainer =
                 | Some payoff -> payoff, Array.empty
 
         /// Recurses for non-terminal game state.
-        and loopNonTerminal (state : GameState) reachProbs =
+        and loopNonTerminal state reachProbs =
 
                 // get player's current strategy for this info set
             let strategy =
@@ -78,7 +72,7 @@ module Trainer =
                             let state = state.AddAction(action)
                             loop state reachProbs)
                         |> Array.unzip
-                getActiveUtilities utilities,
+                DenseVector.ofSeq utilities,
                 Array.concat keyedInfoSetArrays
 
                 // utility of this info set is action utilities weighted by action probabilities
@@ -106,34 +100,20 @@ module Trainer =
             |> loop state
 
     /// Trains for the given number of iterations.
-    let train numIterations =
+    let train numIterations chunkSize states =
 
         let utilities, infoSetMap =
 
-                // each iteration evaluates a chunk of deals
-            let dealChunks =
-                let permutations =
-                    LeducHoldem.deck
-                        |> List.permutations
-                        |> Seq.map (fun deck ->
-                            Seq.toArray deck[0..1], deck[2])
-                        |> Seq.toArray
-                let chunkSize = 250
-                seq {
-                    for i = 0 to numIterations - 1 do
-                        yield permutations[i % permutations.Length]
-                } |> Seq.chunkBySize chunkSize
+            let chunks = Seq.chunkBySize chunkSize states
 
                 // start with no known info sets
-            (Map.empty, dealChunks)
-                ||> Seq.mapFold (fun infoSetMap deals ->
+            (Map.empty, chunks)
+                ||> Seq.mapFold (fun infoSetMap chunk ->
 
                         // evaluate each deal in the given chunk
                     let utilities, updateChunks =
-                        deals
-                            |> Array.Parallel.map
-                                (fun (playerCards, communityCard) ->
-                                    cfr infoSetMap playerCards communityCard)
+                        chunk
+                            |> Array.Parallel.map (cfr infoSetMap)
                             |> Array.unzip
 
                         // update info sets

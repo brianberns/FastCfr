@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Prelude.fs" />
     <Compile Include="InformationSet.fs" />
     <Compile Include="Trainer.fs" />
   </ItemGroup>
