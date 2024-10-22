@@ -2,6 +2,16 @@
 
 open MathNet.Numerics.LinearAlgebra
 
+type GameState =
+    {
+        IsTerminal : bool
+        TerminalValueOpt : Option<float>
+        LegalActions : int[]
+        InfoSetKey : string
+        ActivePlayerIdx : int
+        AddAction : int -> GameState
+    }
+
 module Trainer =
 
     /// Obtains an info set corresponding to the given key.
@@ -29,76 +39,44 @@ module Trainer =
             |> Seq.map (~-)
             |> DenseVector.ofSeq
 
-    /// Evaluates the utility of the given deal via counterfactual
-    /// regret minimization.
-    let private cfr infoSetMap playerCards communityCard =
+    let private numPlayers = 2
+
+    /// Evaluates the utility of the given game state via counter-
+    /// factual regret minimization.
+    let private cfr infoSetMap (state : GameState) =
 
         /// Top-level CFR loop.
-        let rec loop (history : string) reachProbs =
-            let rounds = history.Split('d')
+        let rec loop state reachProbs =
 
                 // game is over?
-            if LeducHoldem.isTerminal rounds then
-                let payoff =
-                    LeducHoldem.getPayoff
-                        playerCards
-                        communityCard
-                        rounds
-                float payoff, Array.empty
-
-                // first round is over?
-            elif LeducHoldem.isRoundEnd (Array.last rounds) then
-                let sign =
-                    match history with
-                        | "xbc" | "brc" -> -1.0
-                        | _ -> 1.0   // active player to play again
-                let utility, keyedInfoSets =
-                    loop (history + "d") reachProbs
-                sign * utility, keyedInfoSets
-
-                // player action
-            else
-                let activePlayer =
-                    (Array.last rounds).Length
-                        % LeducHoldem.numPlayers
-                let infoSetKey =
-                    sprintf "%s%s %s"
-                        playerCards[activePlayer]
-                        (if rounds.Length = 2 then communityCard
-                         else "")
-                        history
-                loopNonTerminal
-                    history
-                    activePlayer
-                    infoSetKey
-                    reachProbs
+            match state.TerminalValueOpt with
+                | None -> loopNonTerminal state reachProbs
+                | Some payoff -> payoff, Array.empty
 
         /// Recurses for non-terminal game state.
-        and loopNonTerminal
-            history
-            activePlayer
-            infoSetKey
-            reachProbs =
-
-                // get info set for current state from this player's point of view
-            let actions = LeducHoldem.getLegalActions history
-            let infoSet =
-                getInfoSet infoSetKey infoSetMap actions.Length
+        and loopNonTerminal (state : GameState) reachProbs =
 
                 // get player's current strategy for this info set
-            let strategy = InformationSet.getStrategy infoSet
+            let strategy =
+                let infoSet =
+                    getInfoSet
+                        state.InfoSetKey
+                        infoSetMap
+                        state.LegalActions.Length
+                InformationSet.getStrategy infoSet
 
                 // get utility of each action
             let actionUtilities, keyedInfoSets =
                 let utilities, keyedInfoSetArrays =
-                    (actions, strategy.ToArray())
+                    (state.LegalActions, strategy.ToArray())
                         ||> Array.map2 (fun action actionProb ->
                             let reachProbs =
                                 updateReachProbabilities
                                     reachProbs
-                                    activePlayer
+                                    state.ActivePlayerIdx
                                     actionProb
-                            loop (history + action) reachProbs)
+                            let state = state.AddAction(action)
+                            loop state reachProbs)
                         |> Array.unzip
                 getActiveUtilities utilities,
                 Array.concat keyedInfoSetArrays
@@ -111,21 +89,21 @@ module Trainer =
                 let infoSet =
                     let regrets =
                         let opponent =
-                            (activePlayer + 1) % LeducHoldem.numPlayers
+                            (state.ActivePlayerIdx + 1) % numPlayers
                         reachProbs[opponent] * (actionUtilities - utility)
                     let strategy =
-                        reachProbs[activePlayer] * strategy
+                        reachProbs[state.ActivePlayerIdx] * strategy
                     InformationSet.create regrets strategy
                 [|
                     yield! keyedInfoSets
-                    yield infoSetKey, infoSet
+                    yield state.InfoSetKey, infoSet
                 |]
 
             utility, keyedInfoSets
 
         [| 1.0; 1.0 |]
             |> DenseVector.ofArray
-            |> loop ""
+            |> loop state
 
     /// Trains for the given number of iterations.
     let train numIterations =
