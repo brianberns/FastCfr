@@ -105,16 +105,16 @@ module Trainer =
             |> DenseVector.ofArray
             |> loop game
 
-    /// Trains for the given number of iterations.
-    let train numIterations gameChunks =
+    /// Trains using the given games.
+    let train gameChunks =
 
-        let utilities, infoSetMap =
+        let infoSetMap, nGames, utilities =
 
                 // start with no known info sets
-            (Map.empty, gameChunks)
-                ||> Seq.mapFold (fun infoSetMap games ->
+            ((Map.empty, 0, 0.0), gameChunks)
+                ||> Seq.fold (fun (infoSetMap, utilityCount, utilitySum) games ->
 
-                        // evaluate each deal in the given chunk
+                        // evaluate each game in the given chunk
                     let utilities, updateChunks =
                         games
                             |> Array.Parallel.map (cfr infoSetMap)
@@ -136,9 +136,10 @@ module Trainer =
                                 key, sum)
                             |> Map
 
-                    Seq.sum utilities, infoSetMap)
+                    infoSetMap,
+                    utilityCount + utilities.Length,
+                    utilitySum + Seq.sum utilities)
 
-            // compute average utility per deal
-        let utility =
-            Seq.sum utilities / float numIterations
+            // compute average utility per game
+        let utility = utilities / float nGames
         utility, infoSetMap

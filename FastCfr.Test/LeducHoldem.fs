@@ -154,7 +154,7 @@ module LeducHoldem =
                         createGameState history playerCards communityCard
             }
 
-    let train numIterations chunkSize =
+    let train numGames chunkSize =
         let games =
             seq {
                 for shuffled in List.permutations deck do
@@ -165,5 +165,6 @@ module LeducHoldem =
         let gameChunks =
             Seq.initInfinite (fun _ -> games)
                 |> Seq.concat
+                |> Seq.truncate numGames
                 |> Seq.chunkBySize chunkSize
-        Trainer.train numIterations gameChunks
+        Trainer.train gameChunks
