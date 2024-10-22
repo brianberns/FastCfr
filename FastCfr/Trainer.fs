@@ -3,9 +3,15 @@
 open MathNet.Numerics.LinearAlgebra
 
 type GameState<'action> =
+
+    /// If the game is over, payoff for the first player.
+    | Terminal of float
+
+    /// Game is not over.
+    | NonTerminal of NonTerminalGameState<'action>
+
+and NonTerminalGameState<'action> =
     {
-        /// If the game is over, payoff for the first player.
-        TerminalValueOpt : Option<float>
         LegalActions : 'action[]
         InfoSetKey : string
         ActivePlayerIdx : int
@@ -24,6 +30,9 @@ module Trainer =
             | None ->
                 InformationSet.zero numActions   // first visit
 
+    /// Assume two-player, zero-sum game.
+    let private numPlayers = 2
+
     /// Updates the active player's reach probability to reflect
     /// the probability of an action.
     let private updateReachProbabilities reachProbs activePlayer actionProb =
@@ -33,19 +42,15 @@ module Trainer =
                     x * actionProb
                 else x)
 
-    let private numPlayers = 2
-
     /// Evaluates the utility of the given game state via counter-
     /// factual regret minimization.
-    let private cfr infoSetMap state =
+    let private cfr infoSetMap game =
 
         /// Top-level CFR loop.
-        let rec loop state reachProbs =
-
-                // game is over?
-            match state.TerminalValueOpt with
-                | None -> loopNonTerminal state reachProbs
-                | Some payoff -> payoff, Array.empty
+        let rec loop game reachProbs =
+            match game with
+                | NonTerminal state -> loopNonTerminal state reachProbs
+                | Terminal payoff -> payoff, Array.empty
 
         /// Recurses for non-terminal game state.
         and loopNonTerminal state reachProbs =
@@ -60,6 +65,8 @@ module Trainer =
                 InformationSet.getStrategy infoSet
 
                 // get utility of each action
+            let activePlayer = state.ActivePlayerIdx
+            assert(activePlayer >= 0 && activePlayer < numPlayers)
             let actionUtilities, keyedInfoSets =
                 let utilities, keyedInfoSetArrays =
                     (state.LegalActions, strategy.ToArray())
@@ -67,10 +74,10 @@ module Trainer =
                             let reachProbs =
                                 updateReachProbabilities
                                     reachProbs
-                                    state.ActivePlayerIdx
+                                    activePlayer
                                     actionProb
-                            let state = state.AddAction(action)
-                            loop state reachProbs)
+                            let game = state.AddAction(action)
+                            loop game reachProbs)
                         |> Array.unzip
                 DenseVector.ofSeq utilities,
                 Array.concat keyedInfoSetArrays
@@ -82,11 +89,10 @@ module Trainer =
             let keyedInfoSets =
                 let infoSet =
                     let regrets =
-                        let opponent =
-                            (state.ActivePlayerIdx + 1) % numPlayers
+                        let opponent = (activePlayer + 1) % numPlayers
                         reachProbs[opponent] * (actionUtilities - utility)
                     let strategy =
-                        reachProbs[state.ActivePlayerIdx] * strategy
+                        reachProbs[activePlayer] * strategy
                     InformationSet.create regrets strategy
                 [|
                     yield! keyedInfoSets
@@ -97,22 +103,20 @@ module Trainer =
 
         [| 1.0; 1.0 |]
             |> DenseVector.ofArray
-            |> loop state
+            |> loop game
 
     /// Trains for the given number of iterations.
-    let train numIterations chunkSize states =
+    let train numIterations gameChunks =
 
         let utilities, infoSetMap =
 
-            let chunks = Seq.chunkBySize chunkSize states
-
                 // start with no known info sets
-            (Map.empty, chunks)
-                ||> Seq.mapFold (fun infoSetMap chunk ->
+            (Map.empty, gameChunks)
+                ||> Seq.mapFold (fun infoSetMap games ->
 
                         // evaluate each deal in the given chunk
                     let utilities, updateChunks =
-                        chunk
+                        games
                             |> Array.Parallel.map (cfr infoSetMap)
                             |> Array.unzip
 

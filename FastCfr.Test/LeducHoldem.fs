@@ -1,5 +1,7 @@
 ﻿namespace FastCfr.Test
 
+open FastCfr
+
 module String =
 
     /// Last character in the given string, if any.
@@ -60,13 +62,6 @@ module LeducHoldem =
         | "brc" | "xbrc" -> true
         | _ -> false
 
-    let permutations =
-        deck
-            |> List.permutations
-            |> Seq.map (fun deck ->
-                Seq.toArray deck[0..1], deck[2])
-            |> Seq.toArray
-
     /// Is the given game over?
     let isTerminal rounds =
         let round = Array.last rounds
@@ -125,3 +120,41 @@ module LeducHoldem =
             assert(rounds.Length = 1)
             assert(String.tryLast rounds[0] = Some 'f')
             ante + pay rounds[0]
+
+    let rec addAction (history : string) playerCards communityCard action =
+        let rounds = history.Split('d')
+        let history =
+            if isRoundEnd (Array.last rounds) then
+                history + "d" + action
+            else
+                history + action
+        createGameState history playerCards communityCard
+
+    and createGameState (history : string) playerCards communityCard =
+        let rounds = history.Split('d')
+        if isTerminal rounds then
+            getPayoff playerCards communityCard rounds
+                |> float
+                |> Terminal
+        else
+            let activePlayer =
+                (Array.last rounds).Length % numPlayers
+            let infoSetKey =
+                sprintf "%s%s %s"
+                    playerCards[activePlayer]
+                    (if rounds.Length = 2 then communityCard
+                        else "")
+                    history
+            NonTerminal {
+                LegalActions = getLegalActions history
+                InfoSetKey = infoSetKey
+                ActivePlayerIdx = activePlayer
+                AddAction = addAction history playerCards communityCard
+            }
+
+    let permutations =
+        deck
+            |> List.permutations
+            |> Seq.map (fun deck ->
+                Seq.toArray deck[0..1], deck[2])
+            |> Seq.toArray
