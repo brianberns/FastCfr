@@ -1,5 +1,8 @@
 namespace FastCfr.Test
 
+open System
+open FastCfr
+
 module Program =
 
     let run () =
@@ -8,7 +11,7 @@ module Program =
         let numIterations = 50000
         printfn $"Running Leduc Hold'em parallel CFR for {numIterations} iterations"
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
-        let util, infoSetMap = LeducCfrTrainer.train numIterations
+        let util, infoSetMap = LeducHoldem.train numIterations 250
 
             // expected overall utility
         printfn $"Average game value for first player: %0.5f{util}\n"

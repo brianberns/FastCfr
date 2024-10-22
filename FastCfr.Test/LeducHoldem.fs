@@ -121,24 +121,19 @@ module LeducHoldem =
             assert(String.tryLast rounds[0] = Some 'f')
             ante + pay rounds[0]
 
-    let rec addAction (history : string) playerCards communityCard action =
+    let rec createGameState (history : string) playerCards communityCard =
         let rounds = history.Split('d')
-        let history =
-            if isRoundEnd (Array.last rounds) then
-                history + "d" + action
-            else
-                history + action
-        createGameState history playerCards communityCard
-
-    and createGameState (history : string) playerCards communityCard =
-        let rounds = history.Split('d')
+        let activePlayer =
+            (Array.last rounds).Length % numPlayers
         if isTerminal rounds then
-            getPayoff playerCards communityCard rounds
-                |> float
-                |> Terminal
+            let payoff = getPayoff playerCards communityCard rounds
+            let payoff =
+                match activePlayer with
+                    | 0 -> payoff
+                    | 1 -> -payoff
+                    | _ -> failwith "Unexpected"
+            payoff |> float |> Terminal
         else
-            let activePlayer =
-                (Array.last rounds).Length % numPlayers
             let infoSetKey =
                 sprintf "%s%s %s"
                     playerCards[activePlayer]
@@ -149,12 +144,26 @@ module LeducHoldem =
                 LegalActions = getLegalActions history
                 InfoSetKey = infoSetKey
                 ActivePlayerIdx = activePlayer
-                AddAction = addAction history playerCards communityCard
+                AddAction =
+                    fun action ->
+                        let history =
+                            if isRoundEnd (Array.last rounds) then
+                                history + "d" + action
+                            else
+                                history + action
+                        createGameState history playerCards communityCard
             }
 
-    let permutations =
-        deck
-            |> List.permutations
-            |> Seq.map (fun deck ->
-                Seq.toArray deck[0..1], deck[2])
-            |> Seq.toArray
+    let train numIterations chunkSize =
+        let games =
+            seq {
+                for shuffled in List.permutations deck do
+                    let playerCards = Seq.toArray shuffled[0..1]
+                    let communityCard = shuffled[2]
+                    yield createGameState "" playerCards communityCard
+            }
+        let gameChunks =
+            Seq.initInfinite (fun _ -> games)
+                |> Seq.concat
+                |> Seq.chunkBySize chunkSize
+        Trainer.train numIterations gameChunks
