@@ -133,6 +133,9 @@ module LeducHoldem =
                     | 1 -> -payoff
                     | _ -> failwith "Unexpected"
             payoff |> float |> Terminal
+        elif isRoundEnd (Array.last rounds) then
+            let history = history + "d"
+            createGameState history playerCards communityCard
         else
             let infoSetKey =
                 sprintf "%s%s %s"
@@ -146,11 +149,7 @@ module LeducHoldem =
                 ActivePlayerIdx = activePlayer
                 AddAction =
                     fun action ->
-                        let history =
-                            if isRoundEnd (Array.last rounds) then
-                                history + "d" + action
-                            else
-                                history + action
+                        let history = history + action
                         createGameState history playerCards communityCard
             }
 
