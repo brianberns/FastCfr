@@ -128,7 +128,7 @@ module LeducHoldem =
         if isTerminal rounds then
             let payoff = getPayoff playerCards communityCard rounds
             Terminal {
-                ActivePlayerIdx = activePlayer
+                PayoffPlayerIdx = activePlayer
                 Payoff = float payoff
             }
         elif isRoundEnd (Array.last rounds) then

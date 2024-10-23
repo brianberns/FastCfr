@@ -4,23 +4,35 @@ open MathNet.Numerics.LinearAlgebra
 
 type GameState<'action> =
 
-    /// Game is not over.
+    /// Game is in progress.
     | NonTerminal of NonTerminalGameState<'action>
 
     /// Game is over.
     | Terminal of TerminalGameState
 
+/// Game is in progress.
 and NonTerminalGameState<'action> =
     {
+        /// Legal actions in this state.
         LegalActions : 'action[]
+
+        /// Unique key of this state.
         InfoSetKey : string
+
+        /// Index of current player.
         ActivePlayerIdx : int
+
+        /// Adds the given action to the game.
         AddAction : 'action -> GameState<'action>
     }
 
+/// Game is over.
 and TerminalGameState =
     {
-        ActivePlayerIdx : int
+        /// Index of player receiving payoff.
+        PayoffPlayerIdx : int
+
+        /// Payoff for this player.
         Payoff : float
     }
 
@@ -85,7 +97,7 @@ module Trainer =
                             let game = state.AddAction(action)
                             let terminal, keyedInfoSets = loop game reachProbs
                             let util =
-                                if terminal.ActivePlayerIdx = activePlayer then
+                                if terminal.PayoffPlayerIdx = activePlayer then
                                     terminal.Payoff
                                 else -terminal.Payoff
                             util, keyedInfoSets)
@@ -111,7 +123,7 @@ module Trainer =
                 |]
 
             let terminal =
-                { ActivePlayerIdx = activePlayer; Payoff = utility }
+                { PayoffPlayerIdx = activePlayer; Payoff = utility }
             terminal, keyedInfoSets
 
         [| 1.0; 1.0 |]
@@ -132,7 +144,7 @@ module Trainer =
                         games
                             |> Array.Parallel.map (fun game ->
                                 let state, keyedInfoSets = cfr infoSetMap game
-                                assert(state.ActivePlayerIdx = 0)
+                                assert(state.PayoffPlayerIdx = 0)
                                 state.Payoff, keyedInfoSets)
                             |> Array.unzip
 
