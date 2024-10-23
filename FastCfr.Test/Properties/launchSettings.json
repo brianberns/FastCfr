@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "FastCfr.Test": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_gcServer": "1"
+      }
+    }
+  }
+}
