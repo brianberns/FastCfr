@@ -141,9 +141,9 @@ module LeducHoldem =
                         else "")
                     history
             NonTerminal {
-                LegalActions = getLegalActions history
-                InfoSetKey = infoSetKey
                 ActivePlayerIdx = activePlayer
+                InfoSetKey = infoSetKey
+                LegalActions = getLegalActions history
                 AddAction =
                     fun action ->
                         let history = history + action

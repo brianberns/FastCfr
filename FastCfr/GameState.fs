@@ -1,5 +1,6 @@
 ﻿namespace FastCfr
 
+/// State of a game.
 type GameState<'action> =
 
     /// Game is in progress.
@@ -11,14 +12,15 @@ type GameState<'action> =
 /// Game is in progress.
 and NonTerminalGameState<'action> =
     {
-        /// Legal actions in this state.
-        LegalActions : 'action[]
-
-        /// Unique key of this state.
-        InfoSetKey : string
-
         /// Index of current player.
         ActivePlayerIdx : int
+
+        /// Unique key of this state from the active player's
+        /// point of view.
+        InfoSetKey : string
+
+        /// Legal actions in this state.
+        LegalActions : 'action[]
 
         /// Adds the given action to the game.
         AddAction : 'action -> GameState<'action>
