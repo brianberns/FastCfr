@@ -8,10 +8,11 @@ module Program =
     let run () =
 
             // train
-        let numIterations = 50000
-        printfn $"Running Leduc Hold'em parallel CFR for {numIterations} iterations"
+        let numGames = 50000
+        let chunkSize = 250
+        printfn $"Running Leduc Hold'em parallel CFR for {numGames} games"
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
-        let util, infoSetMap = LeducHoldem.train numIterations 250
+        let util, infoSetMap = LeducHoldem.train numGames chunkSize
 
             // expected overall utility
         printfn $"Average game value for first player: %0.5f{util}\n"
