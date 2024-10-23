@@ -4,11 +4,11 @@ open MathNet.Numerics.LinearAlgebra
 
 type GameState<'action> =
 
-    /// If the game is over, payoff for the first player.
-    | Terminal of float
-
     /// Game is not over.
     | NonTerminal of NonTerminalGameState<'action>
+
+    /// Game is over.
+    | Terminal of TerminalGameState
 
 and NonTerminalGameState<'action> =
     {
@@ -16,6 +16,12 @@ and NonTerminalGameState<'action> =
         InfoSetKey : string
         ActivePlayerIdx : int
         AddAction : 'action -> GameState<'action>
+    }
+
+and TerminalGameState =
+    {
+        ActivePlayerIdx : int
+        Payoff : float
     }
 
 module Trainer =
@@ -50,7 +56,7 @@ module Trainer =
         let rec loop game reachProbs =
             match game with
                 | NonTerminal state -> loopNonTerminal state reachProbs
-                | Terminal payoff -> payoff, Array.empty
+                | Terminal state -> state, Array.empty
 
         /// Recurses for non-terminal game state.
         and loopNonTerminal state reachProbs =
@@ -77,7 +83,12 @@ module Trainer =
                                     activePlayer
                                     actionProb
                             let game = state.AddAction(action)
-                            loop game reachProbs)
+                            let terminal, keyedInfoSets = loop game reachProbs
+                            let util =
+                                if terminal.ActivePlayerIdx = activePlayer then
+                                    terminal.Payoff
+                                else -terminal.Payoff
+                            util, keyedInfoSets)
                         |> Array.unzip
                 DenseVector.ofSeq utilities,
                 Array.concat keyedInfoSetArrays
@@ -99,7 +110,9 @@ module Trainer =
                     yield state.InfoSetKey, infoSet
                 |]
 
-            utility, keyedInfoSets
+            let terminal =
+                { ActivePlayerIdx = activePlayer; Payoff = utility }
+            terminal, keyedInfoSets
 
         [| 1.0; 1.0 |]
             |> DenseVector.ofArray
@@ -117,7 +130,10 @@ module Trainer =
                         // evaluate each game in the given chunk
                     let utilities, updateChunks =
                         games
-                            |> Array.Parallel.map (cfr infoSetMap)
+                            |> Array.Parallel.map (fun game ->
+                                let state, keyedInfoSets = cfr infoSetMap game
+                                assert(state.ActivePlayerIdx = 0)
+                                state.Payoff, keyedInfoSets)
                             |> Array.unzip
 
                         // update info sets
