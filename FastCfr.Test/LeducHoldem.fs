@@ -149,15 +149,16 @@ let rec createGameState (history : string) playerCards communityCard =
         }
 
 let train numGames chunkSize =
+    let rng = System.Random(0)
     let games =
-        seq {
-            for shuffled in List.permutations deck do
-                let playerCards = Seq.toArray shuffled[0..1]
-                let communityCard = shuffled[2]
+        [|
+            for cards in List.permutations deck do
+                let playerCards = Seq.toArray cards[0..1]
+                let communityCard = cards[2]
                 yield createGameState "" playerCards communityCard
-        }
+        |]
     let gameChunks =
-        Seq.initInfinite (fun _ -> games)
+        Seq.initInfinite (fun _ -> rng.GetItems(games, 1))
             |> Seq.concat
             |> Seq.truncate numGames
             |> Seq.chunkBySize chunkSize

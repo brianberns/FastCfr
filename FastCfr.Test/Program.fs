@@ -67,5 +67,5 @@ module Program =
         printfn ""
         printfn $"Elapsed time: {timer}"
 
-    BenchmarkRunner.Run(typeof<Benchmark>) |> ignore
-    // run ()
+    // BenchmarkRunner.Run(typeof<Benchmark>) |> ignore
+    run ()

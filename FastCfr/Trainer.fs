@@ -101,7 +101,9 @@ module Trainer =
             keyedInfoSets
 
         let reachProbs = DenseVector.create numPlayers 1.0
-        loop reachProbs game
+        let state, keyedInfoSets = loop reachProbs game
+        assert(state.PayoffPlayerIdx = 0)
+        state.Payoff, keyedInfoSets
 
     /// Trains using the given games.
     let train gameChunks =
@@ -115,10 +117,7 @@ module Trainer =
                         // evaluate each game in the given chunk
                     let utilities, updateChunks =
                         games
-                            |> Array.Parallel.map (fun game ->
-                                let state, keyedInfoSets = cfr infoSetMap game
-                                assert(state.PayoffPlayerIdx = 0)
-                                state.Payoff, keyedInfoSets)
+                            |> Array.Parallel.map (cfr infoSetMap)
                             |> Array.unzip
 
                         // update info sets
