@@ -61,7 +61,7 @@ module Trainer =
             assert(activePlayer >= 0 && activePlayer < numPlayers)
             let actionUtilities, keyedInfoSets =
                 let utilities, keyedInfoSetArrays =
-                    (state.LegalActions, strategy.ToArray())
+                    (state.LegalActions, strategy.AsArray())
                         ||> Array.map2 (fun action actionProb ->
                             let reachProbs =
                                 updateReachProbabilities
