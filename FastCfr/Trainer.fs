@@ -41,7 +41,12 @@ module Trainer =
         /// Top-level CFR loop.
         let rec loop reachProbs game =
             match game with
-                | NonTerminal state -> loopNonTerminal state reachProbs
+                | NonTerminal state ->
+                if reachProbs |> Vector.forall ((=) 0.0) then   // prune?
+                    TerminalGameState.create state.ActivePlayerIdx 0.0,
+                    Array.empty
+                else
+                    loopNonTerminal state reachProbs
                 | Terminal state -> state, Array.empty
 
         /// Recurses for non-terminal game state.

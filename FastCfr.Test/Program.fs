@@ -7,12 +7,24 @@ open BenchmarkDotNet.Running
 
 open FastCfr
 
+(*
+BenchmarkDotNet v0.14.0, Windows 11 (10.0.22631.4391/23H2/2023Update/SunValley3)
+12th Gen Intel Core i9-12900, 1 CPU, 24 logical and 16 physical cores
+.NET SDK 8.0.403
+  [Host]     : .NET 8.0.10 (8.0.1024.46610), X64 RyuJIT AVX2 DEBUG
+  DefaultJob : .NET 8.0.10 (8.0.1024.46610), X64 RyuJIT AVX2
+
+
+| Method      | NumGames | ChunkSize | Mean     | Error    | StdDev   |
+|------------ |--------- |---------- |---------:|---------:|---------:|
+| LeducHoldem | 50000    | 250       | 647.8 ms | 12.19 ms | 12.51 ms |
+*)
 type Benchmark() =
 
     [<Params(50_000)>]
     member val NumGames = 0 with get, set
 
-    [<Params(10, 100, 250, 1000)>]
+    [<Params(250)>]
     member val ChunkSize = 0 with get, set
 
     [<Benchmark>]
@@ -56,3 +68,4 @@ module Program =
         printfn $"Elapsed time: {timer}"
 
     BenchmarkRunner.Run(typeof<Benchmark>) |> ignore
+    // run ()
