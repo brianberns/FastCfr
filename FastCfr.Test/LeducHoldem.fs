@@ -126,11 +126,10 @@ module LeducHoldem =
         let activePlayer =
             (Array.last rounds).Length % numPlayers
         if isTerminal rounds then
-            let payoff = getPayoff playerCards communityCard rounds
-            Terminal {
-                PayoffPlayerIdx = activePlayer
-                Payoff = float payoff
-            }
+            TerminalGameState.create
+                activePlayer
+                (getPayoff playerCards communityCard rounds)
+                |> Terminal
         elif isRoundEnd (Array.last rounds) then
             let history = history + "d"
             createGameState history playerCards communityCard

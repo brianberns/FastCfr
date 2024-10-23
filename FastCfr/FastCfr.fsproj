@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <Compile Include="InformationSet.fs" />
+    <Compile Include="GameState.fs" />
     <Compile Include="Trainer.fs" />
   </ItemGroup>
 

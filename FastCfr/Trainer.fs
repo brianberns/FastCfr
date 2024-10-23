@@ -2,40 +2,6 @@
 
 open MathNet.Numerics.LinearAlgebra
 
-type GameState<'action> =
-
-    /// Game is in progress.
-    | NonTerminal of NonTerminalGameState<'action>
-
-    /// Game is over.
-    | Terminal of TerminalGameState
-
-/// Game is in progress.
-and NonTerminalGameState<'action> =
-    {
-        /// Legal actions in this state.
-        LegalActions : 'action[]
-
-        /// Unique key of this state.
-        InfoSetKey : string
-
-        /// Index of current player.
-        ActivePlayerIdx : int
-
-        /// Adds the given action to the game.
-        AddAction : 'action -> GameState<'action>
-    }
-
-/// Game is over.
-and TerminalGameState =
-    {
-        /// Index of player receiving payoff.
-        PayoffPlayerIdx : int
-
-        /// Payoff for this player.
-        Payoff : float
-    }
-
 module Trainer =
 
     /// Obtains an info set corresponding to the given key.
@@ -60,12 +26,20 @@ module Trainer =
                     x * actionProb
                 else x)
 
+    /// Negates opponent's payoff (assuming a zero-zum game).
+    let private getActiveUtility activePlayer (terminal, keyedInfoSets) =
+        let utility =
+            if terminal.PayoffPlayerIdx = activePlayer then
+                terminal.Payoff
+            else -terminal.Payoff
+        utility, keyedInfoSets
+
     /// Evaluates the utility of the given game state via counter-
     /// factual regret minimization.
     let private cfr infoSetMap game =
 
         /// Top-level CFR loop.
-        let rec loop game reachProbs =
+        let rec loop reachProbs game =
             match game with
                 | NonTerminal state -> loopNonTerminal state reachProbs
                 | Terminal state -> state, Array.empty
@@ -94,13 +68,9 @@ module Trainer =
                                     reachProbs
                                     activePlayer
                                     actionProb
-                            let game = state.AddAction(action)
-                            let terminal, keyedInfoSets = loop game reachProbs
-                            let util =
-                                if terminal.PayoffPlayerIdx = activePlayer then
-                                    terminal.Payoff
-                                else -terminal.Payoff
-                            util, keyedInfoSets)
+                            state.AddAction(action)
+                                |> loop reachProbs
+                                |> getActiveUtility activePlayer)
                         |> Array.unzip
                 DenseVector.ofSeq utilities,
                 Array.concat keyedInfoSetArrays
@@ -122,13 +92,11 @@ module Trainer =
                     yield state.InfoSetKey, infoSet
                 |]
 
-            let terminal =
-                { PayoffPlayerIdx = activePlayer; Payoff = utility }
-            terminal, keyedInfoSets
+            TerminalGameState.create activePlayer utility,
+            keyedInfoSets
 
-        [| 1.0; 1.0 |]
-            |> DenseVector.ofArray
-            |> loop game
+        let reachProbs = DenseVector.create numPlayers 1.0
+        loop reachProbs game
 
     /// Trains using the given games.
     let train gameChunks =
