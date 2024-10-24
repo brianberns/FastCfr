@@ -5,6 +5,8 @@ open System
 open MathNet.Numerics.Distributions
 open MathNet.Numerics.LinearAlgebra
 
+#nowarn "57"
+
 module Trainer =
 
     /// Obtains an info set corresponding to the given key.
@@ -127,7 +129,7 @@ module Trainer =
         Array.append
             (Map.toArray infoSetMap)
             (Array.concat updateChunks)
-            |> Array.groupBy fst
+            |> Array.Parallel.groupBy fst
             |> Array.Parallel.map (fun (key, group) ->
                 let sum =
                     group
