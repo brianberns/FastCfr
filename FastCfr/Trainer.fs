@@ -122,6 +122,22 @@ module Trainer =
         assert(state.PayoffPlayerIdx = 0)
         state.Payoff, keyedInfoSets
 
+    /// Updates information sets.
+    let private update infoSetMap updateChunks =
+        [|
+            yield! Map.toSeq infoSetMap
+            for updates in updateChunks do
+                yield! updates
+        |]
+            |> Array.groupBy fst
+            |> Array.map (fun (key : string, group) ->
+                let sum =
+                    group
+                        |> Array.map snd
+                        |> Array.reduce (+)   // accumulate regrets and strategies
+                key, sum)
+            |> Map
+
     /// Trains using the given games.
     let train seed gameChunks =
 
@@ -143,22 +159,7 @@ module Trainer =
                             |> Array.unzip
 
                         // update info sets
-                    let infoSetMap =
-                        seq {
-                            yield! Map.toSeq infoSetMap
-                            for updates in updateChunks do
-                                yield! updates
-                        }
-                            |> Seq.groupBy fst
-                            |> Seq.map (fun (key, group) ->
-                                let sum =
-                                    group
-                                        |> Seq.map snd
-                                        |> Seq.reduce (+)   // accumulate regrets and strategies
-                                key, sum)
-                            |> Map
-
-                    infoSetMap,
+                    update infoSetMap updateChunks,
                     utilityCount + utilities.Length,
                     utilitySum + Seq.sum utilities)
 
