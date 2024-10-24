@@ -15,16 +15,16 @@ BenchmarkDotNet v0.14.0, Windows 11 (10.0.22631.4391/23H2/2023Update/SunValley3)
   DefaultJob : .NET 8.0.10 (8.0.1024.46610), X64 RyuJIT AVX2
 
 
-| Method      | NumGames | ChunkSize | Mean    | Error    | StdDev   |
-|------------ |--------- |---------- |--------:|---------:|---------:|
-| LeducHoldem | 500000   | 250       | 1.260 s | 0.0220 s | 0.0206 s |
+| Method      | NumGames | ChunkSize | Mean     | Error    | StdDev   |
+|------------ |--------- |---------- |---------:|---------:|---------:|
+| LeducHoldem | 500000   | 1000      | 858.2 ms | 16.93 ms | 16.62 ms |
 *)
 type Benchmark() =
 
     [<Params(500_000)>]
     member val NumGames = 0 with get, set
 
-    [<Params(250)>]
+    [<Params(1000)>]
     member val ChunkSize = 0 with get, set
 
     [<Benchmark>]
@@ -37,7 +37,7 @@ module Program =
 
             // train
         let numGames = 5_000_000
-        let chunkSize = 250
+        let chunkSize = 1000
         printfn $"Running Leduc Hold'em parallel Monte Carlo CFR for {numGames} games"
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
         let timer = Diagnostics.Stopwatch.StartNew()
