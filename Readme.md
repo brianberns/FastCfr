@@ -1,4 +1,4 @@
-# Fast Counterfactual Regret Minimization
+# Fast Counterfactual Regret Minimization for F#
 
 * Supports two-player, zero-sum games only.
 
