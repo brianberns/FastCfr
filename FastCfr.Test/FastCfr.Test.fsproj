@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="KuhnPoker.fs" />
     <Compile Include="LeducHoldem.fs" />
     <Compile Include="Tests.fs" />
     <Compile Include="Program.fs" />
