@@ -121,7 +121,6 @@ module Trainer =
 
         let reachProbs = DenseVector.create numPlayers 1.0
         let state, keyedInfoSets = loop reachProbs game
-        assert(state.PayoffPlayerIdx = 0)
         state.Payoff, keyedInfoSets
 
     /// Updates information sets.
@@ -152,7 +151,7 @@ module Trainer =
                     let utilities, updateChunks =
                         assert(Array.length games % 2 = 0)
                         games
-                            |> Array.Parallel.mapi (fun iGame game ->
+                            |> Array.mapi (fun iGame game ->
                                 let rng = Random(seed + iGame)
                                 let updatingPlayer = iGame % numPlayers
                                 cfr rng infoSetMap updatingPlayer game)
