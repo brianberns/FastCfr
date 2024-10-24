@@ -81,4 +81,4 @@ let train numGames chunkSize =
             |> Seq.concat
             |> Seq.truncate numGames
             |> Seq.chunkBySize chunkSize
-    Trainer.train gameChunks
+    Trainer.train (rng.Next()) gameChunks
