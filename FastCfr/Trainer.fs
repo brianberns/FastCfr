@@ -126,8 +126,7 @@ module Trainer =
     let private update infoSetMap updateChunks =
         [|
             yield! Map.toArray infoSetMap
-            for updates in updateChunks do
-                yield! updates
+            yield! Array.concat updateChunks
         |]
             |> Array.groupBy fst
             |> Array.map (fun (key, group) ->
