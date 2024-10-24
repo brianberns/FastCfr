@@ -130,7 +130,7 @@ module Trainer =
             (Map.toArray infoSetMap)
             (Array.concat updateChunks)
             |> Array.Parallel.groupBy fst
-            |> Array.Parallel.map (fun (key, group) ->
+            |> Array.Parallel.map (fun (key : string, group) ->
                 let sum =
                     group
                         |> Array.map snd
