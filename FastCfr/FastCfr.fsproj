@@ -6,10 +6,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="Readme.md" />
     <Compile Include="InformationSet.fs" />
     <Compile Include="GameState.fs" />
     <Compile Include="Trainer.fs" />
   </ItemGroup>
+
+  <ItemGroup />
 
   <ItemGroup>
     <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
