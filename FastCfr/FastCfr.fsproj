@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="Readme.md" />
     <Compile Include="InformationSet.fs" />
     <Compile Include="GameState.fs" />
     <Compile Include="Trainer.fs" />

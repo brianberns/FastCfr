@@ -3,9 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FastCfr", "FastCfr\FastCfr.fsproj", "{1F46F591-9CF5-4684-851D-29D21FFE90E9}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FastCfr", "FastCfr\FastCfr.fsproj", "{1F46F591-9CF5-4684-851D-29D21FFE90E9}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FastCfr.Test", "FastCfr.Test\FastCfr.Test.fsproj", "{CBD24B94-8E92-4CBB-8542-B4FBF9A930CE}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FastCfr.Test", "FastCfr.Test\FastCfr.Test.fsproj", "{CBD24B94-8E92-4CBB-8542-B4FBF9A930CE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A06ED971-62EF-48BE-8A73-A3A1311527F0}"
+	ProjectSection(SolutionItems) = preProject
+		Readme.md = Readme.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
