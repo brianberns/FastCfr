@@ -70,7 +70,7 @@ module Program =
     let runKuhn () =
 
             // train
-        let numGames = 50_000
+        let numGames = 500_000
         let chunkSize = 250
         printfn $"Running Kuhn Poker parallel Monte Carlo CFR for {numGames} games"
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
@@ -95,5 +95,5 @@ module Program =
         printfn ""
         printfn $"Elapsed time: {timer}"
 
-    // BenchmarkRunner.Run(typeof<Benchmark>) |> ignore
-    runKuhn ()
+    BenchmarkRunner.Run(typeof<Benchmark>) |> ignore
+    // runKuhn ()
