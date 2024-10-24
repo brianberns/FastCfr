@@ -125,12 +125,12 @@ module Trainer =
     /// Updates information sets.
     let private update infoSetMap updateChunks =
         [|
-            yield! Map.toSeq infoSetMap
+            yield! Map.toArray infoSetMap
             for updates in updateChunks do
                 yield! updates
         |]
             |> Array.groupBy fst
-            |> Array.map (fun (key : string, group) ->
+            |> Array.map (fun (key, group) ->
                 let sum =
                     group
                         |> Array.map snd

@@ -17,7 +17,7 @@ BenchmarkDotNet v0.14.0, Windows 11 (10.0.22631.4391/23H2/2023Update/SunValley3)
 
 | Method      | NumGames | ChunkSize | Mean    | Error    | StdDev   |
 |------------ |--------- |---------- |--------:|---------:|---------:|
-| LeducHoldem | 500000   | 250       | 1.676 s | 0.0058 s | 0.0054 s |
+| LeducHoldem | 500000   | 250       | 1.571 s | 0.0079 s | 0.0070 s |
 *)
 type Benchmark() =
 
