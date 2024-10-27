@@ -1,29 +1,29 @@
 ﻿namespace FastCfr
 
 /// State of a game.
-type GameState<'action> =
+type GameState<'key, 'action> =
 
     /// Game is in progress.
-    | NonTerminal of NonTerminalGameState<'action>
+    | NonTerminal of NonTerminalGameState<'key, 'action>
 
     /// Game is over.
     | Terminal of TerminalGameState
 
 /// Game is in progress.
-and NonTerminalGameState<'action> =
+and NonTerminalGameState<'key, 'action> =
     {
         /// Index of current player.
         ActivePlayerIdx : int
 
         /// Unique key of this state from the active player's
         /// point of view.
-        InfoSetKey : string
+        InfoSetKey : 'key
 
         /// Legal actions in this state.
         LegalActions : 'action[]
 
         /// Adds the given action to the game.
-        AddAction : 'action -> GameState<'action>
+        AddAction : 'action -> GameState<'key, 'action>
     }
 
 /// Game is over.
