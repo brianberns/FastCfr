@@ -3,7 +3,7 @@ module Tests
 open Xunit
 
 [<Fact>]
-let ``Kuhn Poiker`` () =
+let ``Kuhn Poker`` () =
     let numGames = 500000
     let chunkSize = 1000
     let util, _ = KuhnPoker.train numGames chunkSize

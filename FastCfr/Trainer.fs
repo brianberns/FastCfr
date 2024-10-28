@@ -51,7 +51,12 @@ module Trainer =
                         TerminalGameState.create state.ActivePlayerIdx 0.0,
                         Array.empty
                     else
-                        loopNonTerminal state reachProbs
+                        match state.LegalActions.Length with
+                            | 0 -> failwith "No legal actions"
+                            | 1 ->
+                                state.AddAction(state.LegalActions[0])
+                                    |> loop reachProbs
+                            | _ -> loopNonTerminal state reachProbs
                 | Terminal state -> state, Array.empty
 
         /// Recurses for non-terminal game state.
@@ -129,7 +134,7 @@ module Trainer =
             (Map.toArray infoSetMap)
             (Array.concat updateChunks)
             |> Array.Parallel.groupBy fst
-            |> Array.Parallel.map (fun (key : string, group) ->
+            |> Array.Parallel.map (fun (key, group) ->
                 let sum =
                     group
                         |> Array.map snd
@@ -151,7 +156,7 @@ module Trainer =
                     let utilities, updateChunks =
                         assert(Array.length games % 2 = 0)
                         games
-                            |> Array.mapi (fun iGame game ->
+                            |> Array.Parallel.mapi (fun iGame game ->
                                 let rng = Random(seed + iGame)
                                 let updatingPlayer = iGame % numPlayers
                                 cfr rng infoSetMap updatingPlayer game)
