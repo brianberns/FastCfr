@@ -47,8 +47,8 @@ module Trainer =
         let rec loop reachProbs game =
             match game with
                 | NonTerminal state ->
-                    if reachProbs |> Vector.forall ((=) 0.0) then   // prune?
-                        TerminalGameState.create state.ActivePlayerIdx 0.0,
+                    if reachProbs |> Vector.forall ((=) 0.0f) then   // prune?
+                        TerminalGameState.create state.ActivePlayerIdx 0.0f,
                         Array.empty
                     else
                         match state.LegalActions.Length with
@@ -116,7 +116,11 @@ module Trainer =
             else
                     // sample a single action according to the strategy
                 let utility, keyedInfoSets =
-                    Categorical.Sample(rng, strategy.ToArray())
+                    let arr =
+                        strategy
+                            |> Seq.map float
+                            |> Seq.toArray
+                    Categorical.Sample(rng, arr)
                         |> Array.get state.LegalActions
                         |> state.AddAction
                         |> loop reachProbs
@@ -124,7 +128,7 @@ module Trainer =
                 TerminalGameState.create activePlayer utility,
                 keyedInfoSets
 
-        let reachProbs = DenseVector.create numPlayers 1.0
+        let reachProbs = DenseVector.create numPlayers 1.0f
         let state, keyedInfoSets = loop reachProbs game
         state.Payoff, keyedInfoSets
 
@@ -148,7 +152,7 @@ module Trainer =
         let infoSetMap, nGames, utilities =
 
                 // start with no known info sets
-            ((Map.empty, 0, 0.0), gameChunks)
+            ((Map.empty, 0, 0.0f), gameChunks)
                 ||> Seq.fold (
                     fun (infoSetMap, utilityCount, utilitySum) games ->
 
@@ -168,5 +172,5 @@ module Trainer =
                     utilitySum + Seq.sum utilities)
 
             // compute average utility per game
-        let utility = utilities / float nGames
+        let utility = utilities / float32 nGames
         utility, infoSetMap

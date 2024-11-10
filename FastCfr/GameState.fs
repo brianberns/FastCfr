@@ -33,7 +33,7 @@ and TerminalGameState =
         PayoffPlayerIdx : int
 
         /// Payoff for this player.
-        Payoff : float
+        Payoff : float32
     }
 
 module TerminalGameState =
