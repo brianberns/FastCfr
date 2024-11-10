@@ -2,10 +2,24 @@
 
 open System
 
-open MathNet.Numerics.Distributions
+    open MathNet.Numerics.Distributions
 open MathNet.Numerics.LinearAlgebra
 
 #nowarn "57"
+
+[<AutoOpen>]
+module Distributions =
+
+    type Categorical with
+
+        /// Samples one categorical distributed random variable;
+        /// also known as the Discrete distribution.
+        static member Sample(rnd, probabilityMass : float32[]) =
+            let probabilityMass' =
+                probabilityMass
+                    |> Seq.map float
+                    |> Seq.toArray
+            Categorical.Sample(rnd, probabilityMass')
 
 module Trainer =
 
@@ -116,11 +130,7 @@ module Trainer =
             else
                     // sample a single action according to the strategy
                 let utility, keyedInfoSets =
-                    let arr =
-                        strategy
-                            |> Seq.map float
-                            |> Seq.toArray
-                    Categorical.Sample(rng, arr)
+                    Categorical.Sample(rng, strategy.ToArray())
                         |> Array.get state.LegalActions
                         |> state.AddAction
                         |> loop reachProbs
