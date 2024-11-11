@@ -88,7 +88,7 @@ module Trainer =
                 // get utility of this info set
             let activePlayer = state.ActivePlayerIdx
             assert(activePlayer >= 0 && activePlayer < numPlayers)
-            if activePlayer = updatingPlayer then
+            if true then
 
                     // get utility of each action
                 let actionUtilities, keyedInfoSets =
