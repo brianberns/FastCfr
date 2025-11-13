@@ -143,7 +143,7 @@ module Trainer =
             |> Map
 
     /// Trains using the given games.
-    let train seed gameChunks =
+    let train gameChunks =
 
         let infoSetMap, nGames, utilities =
 
@@ -157,7 +157,7 @@ module Trainer =
                         assert(Array.length games % 2 = 0)
                         games
                             |> Array.Parallel.mapi (fun iGame game ->
-                                let rng = Random(seed + iGame)
+                                let rng = Random()
                                 let updatingPlayer = iGame % numPlayers
                                 cfr rng infoSetMap updatingPlayer game)
                             |> Array.unzip
