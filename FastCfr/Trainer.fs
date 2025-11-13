@@ -154,7 +154,8 @@ module Trainer =
 
                         // evaluate each game in the given chunk
                     let utilities, updateChunks =
-                        assert(Array.length games % 2 = 0)
+                        if Array.length games % 2 <> 0 then
+                            failwith "Chunk contains an odd number of games"
                         games
                             |> Array.Parallel.mapi (fun iGame game ->
                                 let rng = Random()
