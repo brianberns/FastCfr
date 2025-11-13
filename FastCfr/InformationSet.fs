@@ -12,6 +12,10 @@ type InformationSet =
 
         /// Sum of strategies accumulated so far by this info set.
         StrategySum : Vector<float>
+
+        /// Number of visits to this information set so far. This
+        /// is purely informational.
+        NumVisits : int
     }
 
     /// Combines the given information sets.
@@ -19,6 +23,7 @@ type InformationSet =
         {
             RegretSum = a.RegretSum + b.RegretSum
             StrategySum = a.StrategySum + b.StrategySum
+            NumVisits = a.NumVisits + b.NumVisits
         }
 
 module InformationSet =
@@ -28,6 +33,7 @@ module InformationSet =
         {
             RegretSum = regretSum
             StrategySum = strategySum
+            NumVisits = 1
         }
 
     /// Initial info set.
