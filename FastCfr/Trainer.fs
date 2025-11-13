@@ -10,7 +10,8 @@ open MathNet.Numerics.LinearAlgebra
 module Trainer =
 
     /// Obtains an info set corresponding to the given key.
-    let private getInfoSet infoSetKey infoSetMap numActions =
+    let inline private getInfoSet
+        infoSetKey infoSetMap numActions =
         match Map.tryFind infoSetKey infoSetMap with
             | Some infoSet ->
                 assert(infoSet.RegretSum.Count = numActions)
@@ -20,11 +21,12 @@ module Trainer =
                 InformationSet.zero numActions   // first visit
 
     /// Assume two-player, zero-sum game.
-    let private numPlayers = 2
+    let numPlayers = 2
 
     /// Updates the active player's reach probability to reflect
     /// the probability of an action.
-    let private updateReachProbabilities reachProbs activePlayer actionProb =
+    let inline private updateReachProbabilities
+        reachProbs activePlayer actionProb =
         reachProbs
             |> Vector.mapi (fun i x ->
                 if i = activePlayer then
@@ -32,7 +34,8 @@ module Trainer =
                 else x)
 
     /// Negates opponent's payoff (assuming a zero-zum game).
-    let private getActiveUtility activePlayer (terminal, keyedInfoSets) =
+    let inline private getActiveUtility
+        activePlayer (terminal, keyedInfoSets) =
         let utility =
             if terminal.PayoffPlayerIdx = activePlayer then
                 terminal.Payoff
@@ -41,14 +44,17 @@ module Trainer =
 
     /// Evaluates the utility of the given game state via counter-
     /// factual regret minimization.
-    let private cfr rng infoSetMap updatingPlayer game =
+    let inline private cfr<'key, 'action, 'payoff
+        when 'key : comparison
+        and PayoffType<'payoff>>
+        rng infoSetMap updatingPlayer (game : GameState<'key, 'action, 'payoff>) =
 
         /// Top-level CFR loop.
         let rec loop reachProbs game =
             match game with
                 | NonTerminal state ->
-                    if reachProbs |> Vector.forall ((=) 0.0) then   // prune?
-                        TerminalGameState.create state.ActivePlayerIdx 0.0,
+                    if reachProbs |> Vector.forall ((=) 'payoff.Zero) then   // prune?
+                        TerminalGameState.create state.ActivePlayerIdx 'payoff.Zero,
                         Array.empty
                     else
                         match state.LegalActions.Length with
@@ -94,16 +100,17 @@ module Trainer =
                     Array.concat keyedInfoSetArrays
 
                     // utility of this info set is action utilities weighted by action probabilities
-                let utility = actionUtilities * strategy
+                let utility = Vector.(*)(actionUtilities, strategy)
 
                     // accumulate updated regrets and strategy
                 let keyedInfoSets =
                     let infoSet =
                         let regrets =
                             let opponent = (activePlayer + 1) % numPlayers
-                            reachProbs[opponent] * (actionUtilities - utility)
+                            let diff = Vector.(-)(actionUtilities, utility)
+                            Vector.(*)(reachProbs[opponent], diff)
                         let strategy =
-                            reachProbs[activePlayer] * strategy
+                            Vector.(*)(reachProbs[activePlayer], strategy)
                         InformationSet.create regrets strategy
                     [|
                         yield! keyedInfoSets
@@ -116,7 +123,11 @@ module Trainer =
             else
                     // sample a single action according to the strategy
                 let utility, keyedInfoSets =
-                    Categorical.Sample(rng, strategy.ToArray())
+                    let probMass =
+                        strategy
+                            |> Seq.cast<float>   // ugh
+                            |> Seq.toArray
+                    Categorical.Sample(rng, probMass)
                         |> Array.get state.LegalActions
                         |> state.AddAction
                         |> loop reachProbs
@@ -124,12 +135,12 @@ module Trainer =
                 TerminalGameState.create activePlayer utility,
                 keyedInfoSets
 
-        let reachProbs = DenseVector.create numPlayers 1.0
+        let reachProbs = DenseVector.create numPlayers LanguagePrimitives.GenericOne
         let state, keyedInfoSets = loop reachProbs game
         state.Payoff, keyedInfoSets
 
     /// Updates information sets.
-    let private update infoSetMap updateChunks =
+    let inline private update infoSetMap updateChunks =
         Array.append
             (Map.toArray infoSetMap)
             (Array.concat updateChunks)
@@ -143,12 +154,15 @@ module Trainer =
             |> Map
 
     /// Trains using the given games.
-    let train gameChunks =
+    let inline train<'key, 'action, 'payoff
+        when 'key : comparison
+        and PayoffType<'payoff>>
+        gameChunks =
 
         let infoSetMap, nGames, utilities =
 
                 // start with no known info sets
-            ((Map.empty, 0, 0.0), gameChunks)
+            ((Map.empty, 0, 'payoff.Zero), gameChunks)
                 ||> Seq.fold (
                     fun (infoSetMap, utilityCount, utilitySum) games ->
 
@@ -157,10 +171,11 @@ module Trainer =
                         if Array.length games % 2 <> 0 then
                             failwith "Chunk contains an odd number of games"
                         games
-                            |> Array.Parallel.mapi (fun iGame game ->
-                                let rng = Random()
-                                let updatingPlayer = iGame % numPlayers
-                                cfr rng infoSetMap updatingPlayer game)
+                            |> Array.Parallel.mapi (
+                                fun iGame (game : GameState<'key, 'action, 'payoff>) ->
+                                    let rng = Random()
+                                    let updatingPlayer = iGame % numPlayers
+                                    cfr rng infoSetMap updatingPlayer game)
                             |> Array.unzip
 
                         // update info sets
@@ -169,5 +184,5 @@ module Trainer =
                     utilitySum + Seq.sum utilities)
 
             // compute average utility per game
-        let utility = utilities / float nGames
+        let utility = 'payoff.DivideByInt(utilities, nGames)
         utility, infoSetMap
