@@ -12,6 +12,7 @@ type PayoffType<'t
     and 't : (static member (-) : 't * 't -> 't)
     and 't : (static member (*) : 't * 't -> 't)
     and 't : (static member (~-) : 't -> 't)
+    and 't : (static member op_Explicit : 't -> float)
     and 't : comparison
     and 't: (new: unit -> 't)
     and 't: struct

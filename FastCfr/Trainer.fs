@@ -125,7 +125,7 @@ module Trainer =
                 let utility, keyedInfoSets =
                     let probMass =
                         strategy
-                            |> Seq.cast<float>   // ugh
+                            |> Seq.map float   // ugh
                             |> Seq.toArray
                     Categorical.Sample(rng, probMass)
                         |> Array.get state.LegalActions
