@@ -5,8 +5,6 @@ open System
 open MathNet.Numerics.Distributions
 open MathNet.Numerics.LinearAlgebra
 
-#nowarn "57"
-
 module Trainer =
 
     /// Obtains an info set corresponding to the given key.
