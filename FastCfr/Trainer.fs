@@ -142,7 +142,7 @@ module Trainer =
                 TerminalGameState.create activePlayer utility,
                 keyedInfoSets
 
-        let reachProbs = DenseVector.create numPlayers LanguagePrimitives.GenericOne
+        let reachProbs = DenseVector.create numPlayers 'payoff.One
         let state, keyedInfoSets = loop reachProbs game
         state.Payoff, keyedInfoSets
 
@@ -163,6 +163,40 @@ module Trainer =
                 key, sum)
             |> Map
 
+    /// Trains using the given games, yielding the state
+    /// after each chunk of games.
+    let inline trainScan<'key, 'action, 'payoff
+        when 'key : comparison
+        and PayoffType<'payoff>>
+        gameChunks :
+            seq<InformationSetMap<'key, 'payoff> * int (*nGames*) * 'payoff> =
+
+            // start with no known info sets
+        let infoSetMap : InformationSetMap<'key, 'payoff> = Map.empty
+        ((infoSetMap, 0, 'payoff.Zero), gameChunks)
+            ||> Seq.scan (fun (infoSetMap, utilityCount, utilitySum) games ->
+
+                    // evaluate each game in the given chunk
+                let utilities, updateChunks =
+                    if Array.length games % 2 <> 0 then
+                        failwith "Chunk contains an odd number of games"
+                    games
+                        |> Array.Parallel.mapi (
+                            fun
+                                iGame
+                                (game : GameState<'key, 'action, 'payoff>) ->
+                                let rng = Random()
+                                let updatingPlayer = iGame % numPlayers
+                                cfr rng infoSetMap updatingPlayer game)
+                        |> Array.unzip
+
+                    // update info sets
+                let infoSetMap = update infoSetMap updateChunks
+                let nGames = utilityCount + utilities.Length
+                let utilities = utilitySum + Seq.sum utilities
+                infoSetMap, nGames, utilities)
+            |> Seq.skip 1   // skip initial state
+
     /// Trains using the given games.
     let inline train<'key, 'action, 'payoff
         when 'key : comparison
@@ -170,30 +204,10 @@ module Trainer =
         gameChunks :
             'payoff * InformationSetMap<'key, 'payoff> =
 
+            // train to final result
         let infoSetMap, nGames, utilities =
-
-                // start with no known info sets
-            let infoSetMap : InformationSetMap<'key, 'payoff> = Map.empty
-            ((infoSetMap, 0, 'payoff.Zero), gameChunks)
-                ||> Seq.fold (
-                    fun (infoSetMap, utilityCount, utilitySum) games ->
-
-                        // evaluate each game in the given chunk
-                    let utilities, updateChunks =
-                        if Array.length games % 2 <> 0 then
-                            failwith "Chunk contains an odd number of games"
-                        games
-                            |> Array.Parallel.mapi (
-                                fun iGame (game : GameState<'key, 'action, 'payoff>) ->
-                                    let rng = Random()
-                                    let updatingPlayer = iGame % numPlayers
-                                    cfr rng infoSetMap updatingPlayer game)
-                            |> Array.unzip
-
-                        // update info sets
-                    update infoSetMap updateChunks,
-                    utilityCount + utilities.Length,
-                    utilitySum + Seq.sum utilities)
+            trainScan<'key, 'action, 'payoff> gameChunks
+                |> Seq.last
 
             // compute average utility per game
         let utility = 'payoff.DivideByInt(utilities, nGames)
