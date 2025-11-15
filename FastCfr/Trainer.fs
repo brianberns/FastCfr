@@ -5,6 +5,11 @@ open System
 open MathNet.Numerics.Distributions
 open MathNet.Numerics.LinearAlgebra
 
+/// Maps each info set key to its info set.
+type InformationSetMap<'key, 'payoff
+    when 'key : comparison
+    and PayoffType<'payoff>> = Map<'key, InformationSet<'payoff>>
+
 module Trainer =
 
     /// Obtains an info set corresponding to the given key.
@@ -45,7 +50,11 @@ module Trainer =
     let inline private cfr<'key, 'action, 'payoff
         when 'key : comparison
         and PayoffType<'payoff>>
-        rng infoSetMap updatingPlayer (game : GameState<'key, 'action, 'payoff>) =
+        rng
+        (infoSetMap : InformationSetMap<'key, 'payoff>)
+        updatingPlayer
+        (game : GameState<'key, 'action, 'payoff>) :
+            'payoff * ('key * InformationSet<'payoff>)[] =
 
         /// Top-level CFR loop.
         let rec loop reachProbs game =
@@ -138,7 +147,10 @@ module Trainer =
         state.Payoff, keyedInfoSets
 
     /// Updates information sets.
-    let inline private update infoSetMap updateChunks =
+    let inline private update
+        (infoSetMap : InformationSetMap<_, _>)
+        updateChunks :
+            InformationSetMap<_, _> =
         Array.append
             (Map.toArray infoSetMap)
             (Array.concat updateChunks)
@@ -160,7 +172,8 @@ module Trainer =
         let infoSetMap, nGames, utilities =
 
                 // start with no known info sets
-            ((Map.empty, 0, 'payoff.Zero), gameChunks)
+            let infoSetMap : InformationSetMap<'key, 'payoff> = Map.empty
+            ((infoSetMap, 0, 'payoff.Zero), gameChunks)
                 ||> Seq.fold (
                     fun (infoSetMap, utilityCount, utilitySum) games ->
 
