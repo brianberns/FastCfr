@@ -167,7 +167,8 @@ module Trainer =
     let inline train<'key, 'action, 'payoff
         when 'key : comparison
         and PayoffType<'payoff>>
-        gameChunks =
+        gameChunks :
+            'payoff * InformationSetMap<'key, 'payoff> =
 
         let infoSetMap, nGames, utilities =
 
