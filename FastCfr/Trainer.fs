@@ -52,7 +52,6 @@ module Trainer =
         and PayoffType<'payoff>>
         rng
         (infoSetMap : InformationSetMap<'key, 'payoff>)
-        updatingPlayer
         (game : GameState<'key, 'action, 'payoff>) :
             'payoff * ('key * InformationSet<'payoff>)[] =
 
@@ -87,60 +86,44 @@ module Trainer =
                 // get utility of this info set
             let activePlayer = state.ActivePlayerIdx
             assert(activePlayer >= 0 && activePlayer < numPlayers)
-            if activePlayer = updatingPlayer then
 
-                    // get utility of each action
-                let actionUtilities, keyedInfoSets =
-                    let utilities, keyedInfoSetArrays =
-                        (state.LegalActions, strategy.AsArray())
-                            ||> Array.map2 (fun action actionProb ->
-                                let reachProbs =
-                                    updateReachProbabilities
-                                        reachProbs
-                                        activePlayer
-                                        actionProb
-                                state.AddAction(action)
-                                    |> loop reachProbs
-                                    |> getActiveUtility activePlayer)
-                            |> Array.unzip
-                    DenseVector.ofSeq utilities,
-                    Array.concat keyedInfoSetArrays
+                // get utility of each action
+            let actionUtilities, keyedInfoSets =
+                let utilities, keyedInfoSetArrays =
+                    (state.LegalActions, strategy.AsArray())
+                        ||> Array.map2 (fun action actionProb ->
+                            let reachProbs =
+                                updateReachProbabilities
+                                    reachProbs
+                                    activePlayer
+                                    actionProb
+                            state.AddAction(action)
+                                |> loop reachProbs
+                                |> getActiveUtility activePlayer)
+                        |> Array.unzip
+                DenseVector.ofSeq utilities,
+                Array.concat keyedInfoSetArrays
 
-                    // utility of this info set is action utilities weighted by action probabilities
-                let utility = Vector.(*)(actionUtilities, strategy)
+                // utility of this info set is action utilities weighted by action probabilities
+            let utility = Vector.(*)(actionUtilities, strategy)
 
-                    // accumulate updated regrets and strategy
-                let keyedInfoSets =
-                    let infoSet =
-                        let regrets =
-                            let opponent = (activePlayer + 1) % numPlayers
-                            let diff = Vector.(-)(actionUtilities, utility)
-                            Vector.(*)(reachProbs[opponent], diff)
-                        let strategy =
-                            Vector.(*)(reachProbs[activePlayer], strategy)
-                        InformationSet.create regrets strategy
-                    [|
-                        yield! keyedInfoSets
-                        yield state.InfoSetKey, infoSet
-                    |]
+                // accumulate updated regrets and strategy
+            let keyedInfoSets =
+                let infoSet =
+                    let regrets =
+                        let opponent = (activePlayer + 1) % numPlayers
+                        let diff = Vector.(-)(actionUtilities, utility)
+                        Vector.(*)(reachProbs[opponent], diff)
+                    let strategy =
+                        Vector.(*)(reachProbs[activePlayer], strategy)
+                    InformationSet.create regrets strategy
+                [|
+                    yield! keyedInfoSets
+                    yield state.InfoSetKey, infoSet
+                |]
 
-                TerminalGameState.create activePlayer utility,
-                keyedInfoSets
-
-            else
-                    // sample a single action according to the strategy
-                let utility, keyedInfoSets =
-                    let probMass =
-                        strategy
-                            |> Seq.map float   // ugh
-                            |> Seq.toArray
-                    Categorical.Sample(rng, probMass)
-                        |> Array.get state.LegalActions
-                        |> state.AddAction
-                        |> loop reachProbs
-                        |> getActiveUtility activePlayer
-                TerminalGameState.create activePlayer utility,
-                keyedInfoSets
+            TerminalGameState.create activePlayer utility,
+            keyedInfoSets
 
         let reachProbs = DenseVector.create numPlayers 'payoff.One
         let state, keyedInfoSets = loop reachProbs game
@@ -178,16 +161,13 @@ module Trainer =
 
                     // evaluate each game in the given chunk
                 let utilities, updateChunks =
-                    if Array.length games % 2 <> 0 then
-                        failwith "Chunk contains an odd number of games"
                     games
                         |> Array.Parallel.mapi (
                             fun
                                 iGame
                                 (game : GameState<'key, 'action, 'payoff>) ->
                                 let rng = Random()
-                                let updatingPlayer = iGame % numPlayers
-                                cfr rng infoSetMap updatingPlayer game)
+                                cfr rng infoSetMap game)
                         |> Array.unzip
 
                     // update info sets

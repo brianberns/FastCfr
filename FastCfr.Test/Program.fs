@@ -8,23 +8,23 @@ open BenchmarkDotNet.Running
 open FastCfr
 
 (*
-BenchmarkDotNet v0.14.0, Windows 11 (10.0.22631.4391/23H2/2023Update/SunValley3)
-12th Gen Intel Core i9-12900, 1 CPU, 24 logical and 16 physical cores
-.NET SDK 8.0.403
-  [Host]     : .NET 8.0.10 (8.0.1024.46610), X64 RyuJIT AVX2 DEBUG
-  DefaultJob : .NET 8.0.10 (8.0.1024.46610), X64 RyuJIT AVX2
+BenchmarkDotNet v0.15.7, Windows 11 (10.0.26200.7171/25H2/2025Update/HudsonValley2)
+12th Gen Intel Core i9-12900 2.40GHz, 1 CPU, 24 logical and 16 physical cores
+.NET SDK 10.0.100
+  [Host]     : .NET 8.0.22 (8.0.22, 8.0.2225.52707), X64 RyuJIT x86-64-v3 DEBUG
+  DefaultJob : .NET 8.0.22 (8.0.22, 8.0.2225.52707), X64 RyuJIT x86-64-v3
 
 
-| Method      | NumGames | ChunkSize | Mean     | Error    | StdDev   |
-|------------ |--------- |---------- |---------:|---------:|---------:|
-| LeducHoldem | 500000   | 1000      | 858.2 ms | 16.93 ms | 16.62 ms |
+| Method      | NumGames | ChunkSize | Mean     | Error   | StdDev  |
+|------------ |--------- |---------- |---------:|--------:|--------:|
+| LeducHoldem | 100000   | 100       | 727.8 ms | 5.78 ms | 5.13 ms |
 *)
 type Benchmark() =
 
-    [<Params(500_000)>]
+    [<Params(100_000)>]
     member val NumGames = 0 with get, set
 
-    [<Params(1000)>]
+    [<Params(100)>]
     member val ChunkSize = 0 with get, set
 
     [<Benchmark>]
@@ -36,8 +36,8 @@ module Program =
     let runLeduc () =
 
             // train
-        let numGames = 5_000_000
-        let chunkSize = 1000
+        let numGames = 100_000
+        let chunkSize = 100
         printfn $"Running Leduc Hold'em parallel Monte Carlo CFR for {numGames} games"
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
         let timer = Diagnostics.Stopwatch.StartNew()
@@ -70,9 +70,9 @@ module Program =
     let runKuhn () =
 
             // train
-        let numGames = 500_000
-        let chunkSize = 250
-        printfn $"Running Kuhn Poker parallel Monte Carlo CFR for {numGames} games"
+        let numGames = 100_000
+        let chunkSize = 100
+        printfn $"Running Kuhn Poker parallel CFR for {numGames} games"
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
         let timer = Diagnostics.Stopwatch.StartNew()
         let util, infoSetMap = KuhnPoker.train numGames chunkSize
@@ -96,4 +96,4 @@ module Program =
         printfn $"Elapsed time: {timer}"
 
     BenchmarkRunner.Run(typeof<Benchmark>) |> ignore
-    // runKuhn ()
+    // runLeduc ()
