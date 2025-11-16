@@ -38,7 +38,7 @@ module Program =
             // train
         let numGames = 100_000
         let chunkSize = 100
-        printfn $"Running Leduc Hold'em parallel Monte Carlo CFR for {numGames} games"
+        printfn $"Running Leduc Hold'em parallel CFR for {numGames} games"
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
         let timer = Diagnostics.Stopwatch.StartNew()
         let util, infoSetMap = LeducHoldem.train numGames chunkSize

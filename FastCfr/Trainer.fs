@@ -1,8 +1,6 @@
 ﻿namespace FastCfr
 
 open System
-
-open MathNet.Numerics.Distributions
 open MathNet.Numerics.LinearAlgebra
 
 /// Maps each info set key to its info set.
