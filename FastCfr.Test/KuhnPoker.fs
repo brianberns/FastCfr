@@ -69,7 +69,6 @@ let rec createGameState cards history =
             }
 
 let train numGames chunkSize =
-    let rng = System.Random(0)
     let games =
         [|
             for c0 in deck do
@@ -78,8 +77,7 @@ let train numGames chunkSize =
                         yield createGameState [| c0; c1 |] ""
         |]
     let gameChunks =
-        Seq.initInfinite (fun _ -> rng.GetItems(games, 1))
-            |> Seq.concat
+        Seq.initInfinite (fun i -> games[i % games.Length])
             |> Seq.truncate numGames
             |> Seq.chunkBySize chunkSize
     Trainer.trainTwoPlayer gameChunks
