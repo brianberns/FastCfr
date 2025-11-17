@@ -94,7 +94,7 @@ module Trainer =
                 Array.concat keyedInfoSetArrays
 
                 // utility of this info set is action utilities weighted by action probabilities
-            let utility = Matrix.(*)(actionUtilities, strategy)
+            let utility = actionUtilities * strategy
             assert(utility.Count = numPlayers)
 
                 // accumulate updated regrets and strategy
@@ -105,12 +105,11 @@ module Trainer =
                             getOpponentsReachProbability
                                 reachProbs activePlayer
                         let diff =
-                            Vector.(-)(
-                                actionUtilities[0.., activePlayer],
-                                utility[activePlayer])
-                        Vector.(*)(reachProb, diff)
+                            actionUtilities[0.., activePlayer]
+                                - utility[activePlayer]
+                        reachProb * diff
                     let strategy =
-                        Vector.(*)(reachProbs[activePlayer], strategy)
+                        reachProbs[activePlayer] * strategy
                     InformationSet.create regrets strategy
                 [|
                     yield! keyedInfoSets
