@@ -2,20 +2,10 @@
 
 open MathNet.Numerics.LinearAlgebra
 
-/// Maps an info set key to its info set.
-type KeyedInformationSet<'key, 'payoff
-    when 'key : comparison
-    and PayoffType<'payoff>> = 'key * InformationSet<'payoff>
-
-/// Maps each info set key to its info set.
-type InformationSetMap<'key, 'payoff
-    when 'key : comparison
-    and PayoffType<'payoff>> = Map<'key, InformationSet<'payoff>>
-
 module Trainer =
 
     /// Obtains an info set corresponding to the given key.
-    let inline private getInfoSet
+    let private getInfoSet
         infoSetKey infoSetMap numActions =
         match Map.tryFind infoSetKey infoSetMap with
             | Some infoSet ->
@@ -27,7 +17,7 @@ module Trainer =
 
     /// Updates the active player's reach probability to reflect
     /// the probability of an action.
-    let inline private updateReachProbabilities
+    let private updateReachProbabilities
         reachProbs activePlayer actionProb =
         reachProbs
             |> Vector.mapi (fun i x ->
@@ -36,32 +26,24 @@ module Trainer =
                 else x)
 
     /// Gets opponents' reach probability.
-    let inline getOpponentsReachProbability<'payoff
-        when PayoffType<'payoff>>
-        (reachProbs : Vector<'payoff>) activePlayer =
+    let getOpponentsReachProbability
+        (reachProbs : Vector<_>) activePlayer =
         reachProbs
             |> Seq.mapi (fun i x ->
-                if i = activePlayer then 'payoff.One
+                if i = activePlayer then 1f
                 else x)
             |> Seq.reduce (*)
 
     /// Evaluates the utility of the given game state via counter-
     /// factual regret minimization.
-    let inline private cfr<'key, 'action, 'payoff
-        when 'key : comparison
-        and PayoffType<'payoff>>
-        numPlayers
-        (infoSetMap : InformationSetMap<'key, 'payoff>)
-        (game : GameState<'key, 'action, 'payoff>) :
-            Vector<'payoff> * KeyedInformationSet<'key, 'payoff>[] =
+    let private cfr numPlayers infoSetMap game =
 
         /// Top-level CFR loop.
-        let rec loop reachProbs game :
-            Vector<'payoff> * KeyedInformationSet<'key, 'payoff>[] =
+        let rec loop reachProbs game =
             match game with
                 | NonTerminal state ->
-                    if Vector.forall ((=) 'payoff.Zero) reachProbs then   // prune?
-                        DenseVector.zero<'payoff> numPlayers,
+                    if Vector.forall ((=) 0f) reachProbs then   // prune?
+                        DenseVector.zero numPlayers,
                         Array.empty
                     else
                         match state.LegalActions.Length with
@@ -75,15 +57,14 @@ module Trainer =
                     Array.empty
 
         /// Recurses for non-terminal game state.
-        and loopNonTerminal state reachProbs :
-            Vector<'payoff> * KeyedInformationSet<'key, 'payoff>[]  =
+        and loopNonTerminal state reachProbs =
 
                 // per-player probabilities of reaching this state
             assert(reachProbs.Count = numPlayers)
             assert(
                 reachProbs
                     |> Vector.forall (fun prob ->
-                        prob >= 'payoff.Zero && prob <= 'payoff.One))
+                        prob >= 0f && prob <= 1f))
 
                 // get current strategy for this info set
             let strategy =
@@ -139,14 +120,11 @@ module Trainer =
             utility, keyedInfoSets
 
         let reachProbs =
-            DenseVector.create numPlayers 'payoff.One
+            DenseVector.create numPlayers 1f
         loop reachProbs game
 
     /// Updates information sets.
-    let inline private update
-        (infoSetMap : InformationSetMap<_, _>)
-        updateChunks :
-            InformationSetMap<_, _> =
+    let private update infoSetMap updateChunks =
         Array.append
             (Map.toArray infoSetMap)
             (Array.concat updateChunks)
@@ -161,27 +139,19 @@ module Trainer =
 
     /// Trains using the given games, yielding the state
     /// after each chunk of games.
-    let inline trainScan<'key, 'action, 'payoff
-        when 'key : comparison
-        and PayoffType<'payoff>>
-        numPlayers
-        gameChunks :
-            seq<InformationSetMap<'key, 'payoff> * int (*nGames*) * Vector<'payoff>> =
+    let trainScan numPlayers gameChunks =
 
             // start with no known info sets
-        let infoSetMap : InformationSetMap<'key, 'payoff> = Map.empty
-        let utilitySum = DenseVector.zero<'payoff> numPlayers
+        let infoSetMap = Map.empty
+        let utilitySum = DenseVector.zero numPlayers
         ((infoSetMap, 0, utilitySum), gameChunks)
             ||> Seq.scan (fun (infoSetMap, utilityCount, utilitySum) games ->
 
                     // evaluate each game in the given chunk
                 let utilities, updateChunks =
                     games
-                        |> Array.Parallel.mapi (
-                            fun
-                                iGame
-                                (game : GameState<'key, 'action, 'payoff>) ->
-                                cfr numPlayers infoSetMap game)
+                        |> Array.Parallel.map (
+                            cfr numPlayers infoSetMap)
                         |> Array.unzip
 
                     // update info sets
@@ -192,22 +162,21 @@ module Trainer =
             |> Seq.skip 1   // skip initial state
 
     /// Trains using the given games.
-    let inline train<'key, 'action, 'payoff
-        when 'key : comparison
-        and PayoffType<'payoff>>
-        numPlayers
-        gameChunks :
-            InformationSetMap<'key, 'payoff> * Vector<'payoff> =
+    let train numPlayers gameChunks =
 
             // train to final result
         let infoSetMap, nGames, utilities =
-            trainScan<'key, 'action, 'payoff>
-                numPlayers gameChunks
+            trainScan numPlayers gameChunks
                 |> Seq.last
 
             // compute average utility per game
         let utilities =
             utilities
                 |> Vector.map (fun utility ->
-                    'payoff.DivideByInt(utility, nGames))
+                    utility / float32 nGames)
         infoSetMap, utilities
+
+    /// Trains a two-player game using the given games.
+    let trainTwoPlayer gameChunks =
+        let infoSetMap, utilities = train 2 gameChunks
+        infoSetMap, utilities[0]

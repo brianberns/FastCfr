@@ -1,34 +1,17 @@
 ﻿namespace FastCfr
 
-open System
 open MathNet.Numerics.LinearAlgebra
-
-/// Numeric type that represents utility.
-type PayoffType<'t
-    when 't : (static member Zero : 't)
-    and 't : (static member One : 't)
-    and 't : (static member DivideByInt : 't * int -> 't)
-    and 't : (static member (+) : 't * 't -> 't)
-    and 't : (static member (-) : 't * 't -> 't)
-    and 't : (static member (*) : 't * 't -> 't)
-    and 't : (static member (~-) : 't -> 't)
-    and 't : comparison
-    and 't: (new: unit -> 't)
-    and 't: struct
-    and 't :> ValueType
-    and 't :> IEquatable<'t>
-    and 't :> IFormattable> = 't
 
 /// An information set is a set of nodes in a game tree that are
 /// indistinguishable for a given player. This type gathers regrets
 /// and strategies for an information set.
-type InformationSet<'t when PayoffType<'t>> =
+type InformationSet =
     {
         /// Sum of regrets accumulated so far by this info set.
-        RegretSum : Vector<'t>
+        RegretSum : Vector<float32>
 
         /// Sum of strategies accumulated so far by this info set.
-        StrategySum : Vector<'t>
+        StrategySum : Vector<float32>
 
         /// Number of visits to this information set so far. This
         /// is purely informational.
@@ -36,7 +19,7 @@ type InformationSet<'t when PayoffType<'t>> =
     }
 
     /// Combines the given information sets.
-    static member inline (+)(a, b) =
+    static member (+)(a, b) =
         {
             RegretSum = a.RegretSum + b.RegretSum
             StrategySum = a.StrategySum + b.StrategySum
@@ -46,7 +29,7 @@ type InformationSet<'t when PayoffType<'t>> =
 module InformationSet =
 
     /// Creates an information set.
-    let inline create regretSum strategySum =
+    let create regretSum strategySum =
         {
             RegretSum = regretSum
             StrategySum = strategySum
@@ -54,35 +37,33 @@ module InformationSet =
         }
 
     /// Initial info set.
-    let inline zero numActions =
+    let zero numActions =
         let zero = DenseVector.zero numActions
         create zero zero
 
     /// Uniform strategy: All actions have equal probability.
-    let inline private uniformStrategy<'t when PayoffType<'t>>
-        numActions =
-        let den = 't.DivideByInt('t.One, numActions)
+    let private uniformStrategy numActions =
+        let den = 1f / float32 numActions
         DenseVector.create numActions den
 
     /// Normalizes a strategy such that its elements sum to
     /// 1.0 (to represent action probabilities).
-    let inline private normalize<'t when PayoffType<'t>>
-        (strategy : Vector<'t>) =
+    let private normalize strategy =
 
             // assume no negative values during normalization
-        assert(Vector.forall (fun x -> x >= 't.Zero) strategy)
+        assert(Vector.forall (fun x -> x >= 0f) strategy)
 
         let sum = Vector.sum strategy
-        if sum > 't.Zero then Vector.(/)(strategy, sum)   // `strategy / sum` doesn't work?
+        if sum > 0f then strategy / sum
         else uniformStrategy strategy.Count
 
     /// Computes regret-matching strategy from accumulated
     /// regrets.
-    let inline getStrategy<'t when PayoffType<'t>> infoSet =
+    let getStrategy infoSet =
         infoSet.RegretSum
-            |> Vector.map (max 't.Zero)   // clamp negative regrets
+            |> Vector.map (max 0f)   // clamp negative regrets
             |> normalize
 
     /// Computes average strategy from accumulated strateges.
-    let inline getAverageStrategy infoSet =
+    let getAverageStrategy infoSet =
         normalize infoSet.StrategySum

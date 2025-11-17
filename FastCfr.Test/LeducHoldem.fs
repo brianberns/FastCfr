@@ -125,7 +125,8 @@ let rec createGameState (history : string) playerCards communityCard =
         (Array.last rounds).Length % numPlayers
     if isTerminal rounds then
         let payoff = getPayoff playerCards communityCard rounds
-        TerminalGameState.create activePlayer (float payoff)
+        TerminalGameState.createTwoPlayer
+            activePlayer (float32 payoff)
             |> Terminal
     elif isRoundEnd (Array.last rounds) then
         let history = history + "d"
@@ -161,4 +162,4 @@ let train numGames chunkSize =
             |> Seq.concat
             |> Seq.truncate numGames
             |> Seq.chunkBySize chunkSize
-    Trainer.train gameChunks
+    Trainer.trainTwoPlayer gameChunks

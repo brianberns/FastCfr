@@ -1,20 +1,16 @@
 ﻿namespace FastCfr
 
 /// State of a game.
-type GameState<'key, 'action, 'payoff
-    when 'key : comparison
-    and PayoffType<'payoff>> =
+type GameState<'key, 'action> =
 
     /// Game is in progress.
-    | NonTerminal of NonTerminalGameState<'key, 'action, 'payoff>
+    | NonTerminal of NonTerminalGameState<'key, 'action>
 
     /// Game is over.
-    | Terminal of TerminalGameState<'payoff>
+    | Terminal of TerminalGameState
 
 /// Game is in progress.
-and NonTerminalGameState<'key, 'action, 'payoff
-    when 'key : comparison
-    and PayoffType<'payoff>> =
+and NonTerminalGameState<'key, 'action> =
     {
         /// Index of current player.
         ActivePlayerIdx : int
@@ -27,20 +23,28 @@ and NonTerminalGameState<'key, 'action, 'payoff
         LegalActions : 'action[]
 
         /// Adds the given action to the game.
-        AddAction : 'action -> GameState<'key, 'action, 'payoff>
+        AddAction : 'action -> GameState<'key, 'action>
     }
 
 /// Game is over.
-and TerminalGameState<'payoff when PayoffType<'payoff>> =
+and TerminalGameState =
     {
         /// Per-player payoffs.
-        Payoffs : 'payoff[]
+        Payoffs : float32[]
     }
 
 module TerminalGameState =
 
     /// Creates payoffs for each player.
-    let inline create payoffs =
+    let create payoffs =
         {
             Payoffs = payoffs
         }
+
+    /// Creates payoffs for a two-player game.
+    let createTwoPlayer activePlayer payoff =
+        assert(activePlayer >= 0 && activePlayer <= 1)
+        let payoffs =
+            if activePlayer = 0 then [| payoff; -payoff |]
+            else [| -payoff; payoff |]
+        create payoffs

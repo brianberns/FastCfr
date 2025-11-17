@@ -52,7 +52,8 @@ let rec createGameState cards history =
     let activePlayer = getActivePlayer history
     match getPayoff cards history with
         | Some payoff ->
-            TerminalGameState.create activePlayer (float32 payoff)
+            TerminalGameState.createTwoPlayer
+                activePlayer (float32 payoff)
                 |> Terminal
         | None ->
             let infoSetKey =
@@ -81,4 +82,4 @@ let train numGames chunkSize =
             |> Seq.concat
             |> Seq.truncate numGames
             |> Seq.chunkBySize chunkSize
-    Trainer.train gameChunks
+    Trainer.trainTwoPlayer gameChunks
