@@ -2,6 +2,19 @@
 
 open MathNet.Numerics.LinearAlgebra
 
+/// State maintained during training.
+type TrainerState<'key when 'key : comparison> =
+    {
+        /// Maps each information set seen so far by its key.
+        InfoSetMap : Map<'key, InformationSet>
+
+        /// Sum of per-player utilties so far.
+        UtilitySum : Vector<float32>
+
+        /// Number of games played so far.
+        NumGames : int
+    }
+
 module Trainer =
 
     /// Obtains an info set corresponding to the given key.
@@ -141,39 +154,47 @@ module Trainer =
     let trainScan numPlayers gameChunks =
 
             // start with no known info sets
-        let infoSetMap = Map.empty
-        let utilitySum = DenseVector.zero numPlayers
-        ((infoSetMap, 0, utilitySum), gameChunks)
-            ||> Seq.scan (fun (infoSetMap, utilityCount, utilitySum) games ->
+        let state =
+            {
+                InfoSetMap = Map.empty
+                UtilitySum = DenseVector.zero numPlayers
+                NumGames = 0
+            }
+        (state, gameChunks)
+            ||> Seq.scan (fun state games ->
 
                     // evaluate each game in the given chunk
                 let utilities, updateChunks =
                     games
                         |> Array.Parallel.map (
-                            cfr numPlayers infoSetMap)
+                            cfr numPlayers state.InfoSetMap)
                         |> Array.unzip
 
                     // update info sets
-                let infoSetMap = update infoSetMap updateChunks
-                let nGames = utilityCount + utilities.Length
-                let utilities = utilitySum + Array.reduce (+) utilities
-                infoSetMap, nGames, utilities)
+                {
+                    InfoSetMap =
+                        update state.InfoSetMap updateChunks
+                    UtilitySum =
+                        Array.fold (+) state.UtilitySum utilities
+                    NumGames =
+                        state.NumGames + games.Length
+                })
             |> Seq.skip 1   // skip initial state
 
     /// Trains using the given games.
     let train numPlayers gameChunks =
 
             // train to final result
-        let infoSetMap, nGames, utilities =
+        let state =
             trainScan numPlayers gameChunks
                 |> Seq.last
 
             // compute average utility per game
         let utilities =
-            utilities
+            state.UtilitySum
                 |> Vector.map (fun utility ->
-                    utility / float32 nGames)
-        infoSetMap, utilities
+                    utility / float32 state.NumGames)
+        state.InfoSetMap, utilities
 
     /// Trains a two-player game using the given games.
     let trainTwoPlayer gameChunks =
