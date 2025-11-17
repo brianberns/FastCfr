@@ -143,9 +143,9 @@ module Trainer =
             updateChunks
                 |> Array.concat
                 |> Array.Parallel.groupBy fst
-                |> Array.Parallel.map (fun (key, group) ->
+                |> Array.Parallel.map (fun (key, keyedInfoSets) ->
                     let sum =
-                        group
+                        keyedInfoSets
                             |> Seq.map snd
                             |> Seq.reduce (+)
                     key, sum)
