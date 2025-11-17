@@ -120,7 +120,6 @@ let train numGames chunkSize =
                                 yield createGameState [| c0; c1; c2 |] ""
         |]
     let gameChunks =
-        Seq.initInfinite (fun i -> games[i % games.Length])
-            |> Seq.truncate numGames
+        Seq.init numGames (fun i -> games[i % games.Length])
             |> Seq.chunkBySize chunkSize
     Trainer.train 3 gameChunks

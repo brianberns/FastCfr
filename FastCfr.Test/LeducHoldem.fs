@@ -157,7 +157,6 @@ let train numGames chunkSize =
                 yield createGameState "" playerCards communityCard
         |]
     let gameChunks =
-        Seq.initInfinite (fun i -> games[i % games.Length])
-            |> Seq.truncate numGames
+        Seq.init numGames (fun i -> games[i % games.Length])
             |> Seq.chunkBySize chunkSize
     Trainer.trainTwoPlayer gameChunks
