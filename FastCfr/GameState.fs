@@ -33,19 +33,14 @@ and NonTerminalGameState<'key, 'action, 'payoff
 /// Game is over.
 and TerminalGameState<'payoff when PayoffType<'payoff>> =
     {
-        /// Index of payoff player.
-        PayoffPlayerIdx : int
-
-        /// Payoff for this player.
-        Payoff : 'payoff
+        /// Per-player payoffs.
+        Payoffs : 'payoff[]
     }
 
 module TerminalGameState =
 
-    /// Creates a payoff from the given player's point
-    /// of view.
-    let inline create payoffPlayerIdx payoff =
+    /// Creates payoffs for each player.
+    let inline create payoffs =
         {
-            PayoffPlayerIdx = payoffPlayerIdx
-            Payoff = payoff
+            Payoffs = payoffs
         }

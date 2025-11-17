@@ -1,5 +1,5 @@
 # Fast Counterfactual Regret Minimization for F#
 
-* Supports two-player, zero-sum games only.
+* Supports multi-player, zero-sum games.
 
 * Uses paralellization for speed.

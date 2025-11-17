@@ -1,7 +1,11 @@
 ﻿namespace FastCfr
 
-open System
 open MathNet.Numerics.LinearAlgebra
+
+/// Maps an info set key to its info set.
+type KeyedInformationSet<'key, 'payoff
+    when 'key : comparison
+    and PayoffType<'payoff>> = 'key * InformationSet<'payoff>
 
 /// Maps each info set key to its info set.
 type InformationSetMap<'key, 'payoff
@@ -21,9 +25,6 @@ module Trainer =
             | None ->
                 InformationSet.zero numActions   // first visit
 
-    /// Assume two-player, zero-sum game.
-    let numPlayers = 2
-
     /// Updates the active player's reach probability to reflect
     /// the probability of an action.
     let inline private updateReachProbabilities
@@ -34,31 +35,33 @@ module Trainer =
                     x * actionProb
                 else x)
 
-    /// Negates opponent's payoff (assuming a zero-zum game).
-    let inline private getActiveUtility
-        activePlayer (terminal, keyedInfoSets) =
-        let utility =
-            if terminal.PayoffPlayerIdx = activePlayer then
-                terminal.Payoff
-            else -terminal.Payoff
-        utility, keyedInfoSets
+    /// Gets opponents' reach probability.
+    let inline getOpponentsReachProbability<'payoff
+        when PayoffType<'payoff>>
+        (reachProbs : Vector<'payoff>) activePlayer =
+        reachProbs
+            |> Seq.mapi (fun i x ->
+                if i = activePlayer then 'payoff.One
+                else x)
+            |> Seq.reduce (*)
 
     /// Evaluates the utility of the given game state via counter-
     /// factual regret minimization.
     let inline private cfr<'key, 'action, 'payoff
         when 'key : comparison
         and PayoffType<'payoff>>
-        rng
+        numPlayers
         (infoSetMap : InformationSetMap<'key, 'payoff>)
         (game : GameState<'key, 'action, 'payoff>) :
-            'payoff * ('key * InformationSet<'payoff>)[] =
+            Vector<'payoff> * KeyedInformationSet<'key, 'payoff>[] =
 
         /// Top-level CFR loop.
-        let rec loop reachProbs game =
+        let rec loop reachProbs game :
+            Vector<'payoff> * KeyedInformationSet<'key, 'payoff>[] =
             match game with
                 | NonTerminal state ->
-                    if reachProbs |> Vector.forall ((=) 'payoff.Zero) then   // prune?
-                        TerminalGameState.create state.ActivePlayerIdx 'payoff.Zero,
+                    if Vector.forall ((=) 'payoff.Zero) reachProbs then   // prune?
+                        DenseVector.zero<'payoff> numPlayers,
                         Array.empty
                     else
                         match state.LegalActions.Length with
@@ -67,12 +70,22 @@ module Trainer =
                                 state.AddAction(state.LegalActions[0])
                                     |> loop reachProbs
                             | _ -> loopNonTerminal state reachProbs
-                | Terminal state -> state, Array.empty
+                | Terminal state ->
+                    DenseVector.ofArray state.Payoffs,
+                    Array.empty
 
         /// Recurses for non-terminal game state.
-        and loopNonTerminal state reachProbs =
+        and loopNonTerminal state reachProbs :
+            Vector<'payoff> * KeyedInformationSet<'key, 'payoff>[]  =
 
-                // get player's current strategy for this info set
+                // per-player probabilities of reaching this state
+            assert(reachProbs.Count = numPlayers)
+            assert(
+                reachProbs
+                    |> Vector.forall (fun prob ->
+                        prob >= 'payoff.Zero && prob <= 'payoff.One))
+
+                // get current strategy for this info set
             let strategy =
                 let infoSet =
                     getInfoSet
@@ -81,11 +94,9 @@ module Trainer =
                         state.LegalActions.Length
                 InformationSet.getStrategy infoSet
 
-                // get utility of this info set
+                // get utility of each action
             let activePlayer = state.ActivePlayerIdx
             assert(activePlayer >= 0 && activePlayer < numPlayers)
-
-                // get utility of each action
             let actionUtilities, keyedInfoSets =
                 let utilities, keyedInfoSetArrays =
                     (state.LegalActions, strategy.AsArray())
@@ -96,22 +107,27 @@ module Trainer =
                                     activePlayer
                                     actionProb
                             state.AddAction(action)
-                                |> loop reachProbs
-                                |> getActiveUtility activePlayer)
+                                |> loop reachProbs)
                         |> Array.unzip
-                DenseVector.ofSeq utilities,
+                DenseMatrix.ofRowSeq utilities,
                 Array.concat keyedInfoSetArrays
 
                 // utility of this info set is action utilities weighted by action probabilities
-            let utility = Vector.(*)(actionUtilities, strategy)
+            let utility = Matrix.(*)(actionUtilities, strategy)
+            assert(utility.Count = numPlayers)
 
                 // accumulate updated regrets and strategy
             let keyedInfoSets =
                 let infoSet =
                     let regrets =
-                        let opponent = (activePlayer + 1) % numPlayers
-                        let diff = Vector.(-)(actionUtilities, utility)
-                        Vector.(*)(reachProbs[opponent], diff)
+                        let reachProb =
+                            getOpponentsReachProbability
+                                reachProbs activePlayer
+                        let diff =
+                            Vector.(-)(
+                                actionUtilities[0.., activePlayer],
+                                utility[activePlayer])
+                        Vector.(*)(reachProb, diff)
                     let strategy =
                         Vector.(*)(reachProbs[activePlayer], strategy)
                     InformationSet.create regrets strategy
@@ -120,12 +136,11 @@ module Trainer =
                     yield state.InfoSetKey, infoSet
                 |]
 
-            TerminalGameState.create activePlayer utility,
-            keyedInfoSets
+            utility, keyedInfoSets
 
-        let reachProbs = DenseVector.create numPlayers 'payoff.One
-        let state, keyedInfoSets = loop reachProbs game
-        state.Payoff, keyedInfoSets
+        let reachProbs =
+            DenseVector.create numPlayers 'payoff.One
+        loop reachProbs game
 
     /// Updates information sets.
     let inline private update
@@ -149,12 +164,14 @@ module Trainer =
     let inline trainScan<'key, 'action, 'payoff
         when 'key : comparison
         and PayoffType<'payoff>>
+        numPlayers
         gameChunks :
-            seq<InformationSetMap<'key, 'payoff> * int (*nGames*) * 'payoff> =
+            seq<InformationSetMap<'key, 'payoff> * int (*nGames*) * Vector<'payoff>> =
 
             // start with no known info sets
         let infoSetMap : InformationSetMap<'key, 'payoff> = Map.empty
-        ((infoSetMap, 0, 'payoff.Zero), gameChunks)
+        let utilitySum = DenseVector.zero<'payoff> numPlayers
+        ((infoSetMap, 0, utilitySum), gameChunks)
             ||> Seq.scan (fun (infoSetMap, utilityCount, utilitySum) games ->
 
                     // evaluate each game in the given chunk
@@ -164,14 +181,13 @@ module Trainer =
                             fun
                                 iGame
                                 (game : GameState<'key, 'action, 'payoff>) ->
-                                let rng = Random()
-                                cfr rng infoSetMap game)
+                                cfr numPlayers infoSetMap game)
                         |> Array.unzip
 
                     // update info sets
                 let infoSetMap = update infoSetMap updateChunks
                 let nGames = utilityCount + utilities.Length
-                let utilities = utilitySum + Seq.sum utilities
+                let utilities = utilitySum + Array.reduce (+) utilities
                 infoSetMap, nGames, utilities)
             |> Seq.skip 1   // skip initial state
 
@@ -179,14 +195,19 @@ module Trainer =
     let inline train<'key, 'action, 'payoff
         when 'key : comparison
         and PayoffType<'payoff>>
+        numPlayers
         gameChunks :
-            'payoff * InformationSetMap<'key, 'payoff> =
+            InformationSetMap<'key, 'payoff> * Vector<'payoff> =
 
             // train to final result
         let infoSetMap, nGames, utilities =
-            trainScan<'key, 'action, 'payoff> gameChunks
+            trainScan<'key, 'action, 'payoff>
+                numPlayers gameChunks
                 |> Seq.last
 
             // compute average utility per game
-        let utility = 'payoff.DivideByInt(utilities, nGames)
-        utility, infoSetMap
+        let utilities =
+            utilities
+                |> Vector.map (fun utility ->
+                    'payoff.DivideByInt(utility, nGames))
+        infoSetMap, utilities
