@@ -137,17 +137,28 @@ module Trainer =
 
     /// Updates information sets.
     let private update infoSetMap updateChunks =
-        Array.append
-            (Map.toArray infoSetMap)
-            (Array.concat updateChunks)
-            |> Array.Parallel.groupBy fst
-            |> Array.Parallel.map (fun (key, group) ->
-                let sum =
-                    group
-                        |> Array.map snd
-                        |> Array.reduce (+)   // accumulate regrets and strategies
-                key, sum)
-            |> Map
+
+            // match and reduce updates
+        let updates =
+            updateChunks
+                |> Array.concat
+                |> Array.Parallel.groupBy fst
+                |> Array.Parallel.map (fun (key, group) ->
+                    let sum =
+                        group
+                            |> Seq.map snd
+                            |> Seq.reduce (+)
+                    key, sum)
+
+            // merge updates into existing info sets
+        (infoSetMap, updates)
+            ||> Array.fold (fun infoSetMap (key, infoSet) ->
+                let infoSet =
+                    infoSetMap
+                        |> Map.tryFind key
+                        |> Option.map ((+) infoSet)
+                        |> Option.defaultValue infoSet
+                Map.add key infoSet infoSetMap) 
 
     /// Trains using the given games, yielding the state
     /// after each chunk of games.
