@@ -64,7 +64,7 @@ module Program =
     let runKuhn3 () =
 
             // train
-        let numGames = 100_000
+        let numGames = 1_000_000
         let chunkSize = 100
         printfn $"Running three-player Kuhn Poker parallel CFR for {numGames} games"
         printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
@@ -74,9 +74,10 @@ module Program =
             // expected overall utility
         printfn "Average game values:"
         for i = 0 to KuhnPoker3.numPlayers - 1 do
-            printfn $"   Player {i + 1}: %0.5f{utils[i]}"
+            printfn $"Player {i + 1}: %0.5f{utils[i]}"
 
             // strategy
+        printfn ""
         printfn "Strategy:"
         for (KeyValue(key, infoSet)) in infoSetMap do
             let str =
