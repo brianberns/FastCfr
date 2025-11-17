@@ -94,7 +94,7 @@ module Trainer =
                 Array.concat keyedInfoSetArrays
 
                 // utility of this info set is action utilities weighted by action probabilities
-            let utility = actionUtilities * strategy
+            let utility = strategy * actionUtilities
             assert(utility.Count = numPlayers)
 
                 // accumulate updated regrets and strategy
