@@ -15,9 +15,9 @@ BenchmarkDotNet v0.15.7, Windows 11 (10.0.26200.7171/25H2/2025Update/HudsonValle
   DefaultJob : .NET 8.0.22 (8.0.22, 8.0.2225.52707), X64 RyuJIT x86-64-v3
 
 
-| Method      | NumGames | ChunkSize | Mean     | Error   | StdDev  |
-|------------ |--------- |---------- |---------:|--------:|--------:|
-| LeducHoldem | 100000   | 100       | 727.8 ms | 5.78 ms | 5.13 ms |
+| Method      | NumGames | ChunkSize | Mean     | Error    | StdDev   |
+|------------ |--------- |---------- |---------:|---------:|---------:|
+| LeducHoldem | 100000   | 100       | 976.9 ms | 17.15 ms | 16.04 ms |
 *)
 type Benchmark() =
 
@@ -96,4 +96,5 @@ module Program =
         printfn $"Elapsed time: {timer}"
 
     BenchmarkRunner.Run(typeof<Benchmark>) |> ignore
+    // runKuhn ()
     // runLeduc ()
