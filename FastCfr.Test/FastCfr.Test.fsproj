@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <Compile Include="KuhnPoker.fs" />
+    <Compile Include="KuhnPoker3.fs" />
     <Compile Include="LeducHoldem.fs" />
     <Compile Include="Tests.fs" />
     <Compile Include="Program.fs" />

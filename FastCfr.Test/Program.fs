@@ -33,6 +33,64 @@ type Benchmark() =
 
 module Program =
 
+    let runKuhn () =
+
+            // train
+        let numGames = 100_000
+        let chunkSize = 100
+        printfn $"Running Kuhn Poker parallel CFR for {numGames} games"
+        printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
+        let timer = Diagnostics.Stopwatch.StartNew()
+        let infoSetMap, util = KuhnPoker.train numGames chunkSize
+
+            // expected overall utility
+        printfn $"Average game value for first player: %0.5f{util}\n"
+
+            // strategy
+        printfn "Strategy:"
+        for (KeyValue(key, infoSet)) in infoSetMap do
+            let str =
+                let strategy =
+                    InformationSet.getAverageStrategy infoSet
+                (strategy.ToArray(), KuhnPoker.actions)
+                    ||> Array.map2 (fun prob action ->
+                        sprintf "%s: %0.5f" action prob)
+                    |> String.concat ", "
+            printfn $"%-11s{key}:    {str}"
+
+        printfn ""
+        printfn $"Elapsed time: {timer}"
+
+    let runKuhn3 () =
+
+            // train
+        let numGames = 100_000
+        let chunkSize = 100
+        printfn $"Running three-player Kuhn Poker parallel CFR for {numGames} games"
+        printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
+        let timer = Diagnostics.Stopwatch.StartNew()
+        let infoSetMap, utils = KuhnPoker3.train numGames chunkSize
+
+            // expected overall utility
+        printfn "Average game values:"
+        for i = 0 to KuhnPoker3.numPlayers - 1 do
+            printfn $"   Player {i + 1}: %0.5f{utils[i]}"
+
+            // strategy
+        printfn "Strategy:"
+        for (KeyValue(key, infoSet)) in infoSetMap do
+            let str =
+                let strategy =
+                    InformationSet.getAverageStrategy infoSet
+                (strategy.ToArray(), KuhnPoker.actions)
+                    ||> Array.map2 (fun prob action ->
+                        sprintf "%s: %0.5f" action prob)
+                    |> String.concat ", "
+            printfn $"%-11s{key}:    {str}"
+
+        printfn ""
+        printfn $"Elapsed time: {timer}"
+
     let runLeduc () =
 
             // train
@@ -67,34 +125,7 @@ module Program =
         printfn ""
         printfn $"Elapsed time: {timer}"
 
-    let runKuhn () =
-
-            // train
-        let numGames = 100_000
-        let chunkSize = 100
-        printfn $"Running Kuhn Poker parallel CFR for {numGames} games"
-        printfn $"Server garbage collection: {Runtime.GCSettings.IsServerGC}\n"
-        let timer = Diagnostics.Stopwatch.StartNew()
-        let infoSetMap, util = KuhnPoker.train numGames chunkSize
-
-            // expected overall utility
-        printfn $"Average game value for first player: %0.5f{util}\n"
-
-            // strategy
-        printfn "Strategy:"
-        for (KeyValue(key, infoSet)) in infoSetMap do
-            let str =
-                let strategy =
-                    InformationSet.getAverageStrategy infoSet
-                (strategy.ToArray(), KuhnPoker.actions)
-                    ||> Array.map2 (fun prob action ->
-                        sprintf "%s: %0.5f" action prob)
-                    |> String.concat ", "
-            printfn $"%-11s{key}:    {str}"
-
-        printfn ""
-        printfn $"Elapsed time: {timer}"
-
     BenchmarkRunner.Run(typeof<Benchmark>) |> ignore
     // runKuhn ()
+    // runKuhn3 ()
     // runLeduc ()
