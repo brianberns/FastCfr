@@ -12,7 +12,7 @@ let ``Kuhn Poker`` () =
 
 [<Fact>]
 let ``Kuhn Poker (three players)`` () =
-    let numGames = 1_000_000
+    let numGames = 1_500_000
     let chunkSize = 100
     let infoSetMap, utils = KuhnPoker3.train numGames chunkSize
     let expected = 1f/48f
