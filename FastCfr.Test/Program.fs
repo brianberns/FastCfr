@@ -11,14 +11,15 @@ open FastCfr
 BenchmarkDotNet v0.15.7, Windows 11 (10.0.26200.7171/25H2/2025Update/HudsonValley2)
 12th Gen Intel Core i9-12900 2.40GHz, 1 CPU, 24 logical and 16 physical cores
 .NET SDK 10.0.100
-  [Host]     : .NET 8.0.22 (8.0.22, 8.0.2225.52707), X64 RyuJIT x86-64-v3 DEBUG
-  DefaultJob : .NET 8.0.22 (8.0.22, 8.0.2225.52707), X64 RyuJIT x86-64-v3
+  [Host]     : .NET 10.0.0 (10.0.0, 10.0.25.52411), X64 RyuJIT x86-64-v3 DEBUG
+  DefaultJob : .NET 10.0.0 (10.0.0, 10.0.25.52411), X64 RyuJIT x86-64-v3
 
 
-| Method      | NumGames | ChunkSize | Mean     | Error    | StdDev   |
-|------------ |--------- |---------- |---------:|---------:|---------:|
-| LeducHoldem | 100000   | 100       | 936.0 ms | 12.38 ms | 11.58 ms |
+| Method      | NumGames | ChunkSize | Mean    | Error    | StdDev   |
+|------------ |--------- |---------- |--------:|---------:|---------:|
+| LeducHoldem | 100000   | 100       | 1.538 s | 0.0124 s | 0.0116 s |
 *)
+
 type Benchmark() =
 
     [<Params(100_000)>]
