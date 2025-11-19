@@ -141,18 +141,18 @@ module Trainer =
             // match and reduce updates
         let updates =
             updateChunks
-                |> Array.concat
-                |> Array.Parallel.groupBy fst
-                |> Array.Parallel.map (fun (key, keyedInfoSets) ->
+                |> Seq.concat
+                |> Seq.groupBy fst
+                |> Seq.map (fun (key, keyedInfoSets) ->
                     let sum =
                         keyedInfoSets
                             |> Seq.map snd
-                            |> Seq.reduce (+)
+                            |> Seq.reduce (+)   // avoid parallelism for determistic floating point math
                     key, sum)
 
             // merge updates into existing info sets
         (infoSetMap, updates)
-            ||> Array.fold (fun infoSetMap (key, infoSet) ->
+            ||> Seq.fold (fun infoSetMap (key, infoSet) ->
                 let infoSet =
                     infoSetMap
                         |> Map.tryFind key
