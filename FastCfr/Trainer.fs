@@ -2,6 +2,16 @@
 
 open MathNet.Numerics.LinearAlgebra
 
+module Array =
+
+    module Parallel =
+
+        /// Maps the given arrays using the given function .
+        let map2 mapping array1 array2 =
+            Array.zip array1 array2
+                |> Array.Parallel.map (fun (val1, val2) ->
+                    mapping val1 val2)
+
 /// State maintained during training.
 type TrainerState<'key when 'key : comparison> =
     {
@@ -94,7 +104,7 @@ module Trainer =
             let actionUtilities, keyedInfoSets =
                 let utilities, keyedInfoSetArrays =
                     (state.LegalActions, strategy.AsArray())
-                        ||> Array.map2 (fun action actionProb ->
+                        ||> Array.Parallel.map2 (fun action actionProb ->
                             let reachProbs =
                                 updateReachProbabilities
                                     reachProbs
