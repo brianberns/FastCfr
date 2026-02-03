@@ -92,7 +92,7 @@ let rec createGameState cards history =
     match getPayoffs cards history with
         | Some payoffs ->
             payoffs
-                |> Array.map float32
+                |> Array.map float
                 |> TerminalGameState.create
                 |> Terminal
         | None ->

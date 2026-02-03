@@ -30,7 +30,7 @@ and NonTerminalGameState<'key, 'action> =
 and TerminalGameState =
     {
         /// Per-player payoffs.
-        Payoffs : float32[]
+        Payoffs : float[]
     }
 
 module TerminalGameState =

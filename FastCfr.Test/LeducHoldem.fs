@@ -126,7 +126,7 @@ let rec createGameState (history : string) playerCards communityCard =
     if isTerminal rounds then
         let payoff = getPayoff playerCards communityCard rounds
         TerminalGameState.createTwoPlayer
-            activePlayer (float32 payoff)
+            activePlayer (float payoff)
             |> Terminal
     elif isRoundEnd (Array.last rounds) then
         let history = history + "d"

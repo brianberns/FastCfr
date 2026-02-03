@@ -8,10 +8,10 @@ open MathNet.Numerics.LinearAlgebra
 type InformationSet =
     {
         /// Sum of regrets accumulated so far by this info set.
-        RegretSum : Vector<float32>
+        RegretSum : Vector<float>
 
         /// Sum of strategies accumulated so far by this info set.
-        StrategySum : Vector<float32>
+        StrategySum : Vector<float>
     }
 
     /// Combines the given information sets.
@@ -37,7 +37,7 @@ module InformationSet =
 
     /// Uniform strategy: All actions have equal probability.
     let private uniformStrategy numActions =
-        let den = 1f / float32 numActions
+        let den = 1.0 / float numActions
         DenseVector.create numActions den
 
     /// Normalizes a strategy such that its elements sum to
@@ -45,17 +45,17 @@ module InformationSet =
     let private normalize strategy =
 
             // assume no negative values during normalization
-        assert(Vector.forall (fun x -> x >= 0f) strategy)
+        assert(Vector.forall (fun x -> x >= 0.0) strategy)
 
         let sum = Vector.sum strategy
-        if sum > 0f then strategy / sum
+        if sum > 0.0 then strategy / sum
         else uniformStrategy strategy.Count
 
     /// Computes regret-matching strategy from accumulated
     /// regrets.
     let getStrategy infoSet =
         infoSet.RegretSum
-            |> Vector.map (max 0f)   // clamp negative regrets
+            |> Vector.map (max 0.0)   // clamp negative regrets
             |> normalize
 
     /// Computes average strategy from accumulated strateges.

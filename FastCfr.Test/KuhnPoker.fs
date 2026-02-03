@@ -53,7 +53,7 @@ let rec createGameState cards history =
     match getPayoff cards history with
         | Some payoff ->
             TerminalGameState.createTwoPlayer
-                activePlayer (float32 payoff)
+                activePlayer (float payoff)
                 |> Terminal
         | None ->
             let infoSetKey =

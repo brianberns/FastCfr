@@ -19,7 +19,7 @@ type TrainerState<'key when 'key : comparison> =
         InfoSetMap : Map<'key, InformationSet>
 
         /// Sum of per-player utilties so far.
-        UtilitySum : Vector<float32>
+        UtilitySum : Vector<float>
 
         /// Number of games played so far.
         NumGames : int
@@ -53,7 +53,7 @@ module Trainer =
         (reachProbs : Vector<_>) activePlayer =
         reachProbs
             |> Seq.mapi (fun i x ->
-                if i = activePlayer then 1f
+                if i = activePlayer then 1.0
                 else x)
             |> Seq.reduce (*)
 
@@ -65,7 +65,7 @@ module Trainer =
         let rec loop reachProbs game =
             match game with
                 | NonTerminal state ->
-                    if Vector.forall ((=) 0f) reachProbs then   // prune?
+                    if Vector.forall ((=) 0.0) reachProbs then   // prune?
                         DenseVector.zero numPlayers,
                         Array.empty
                     else
@@ -87,7 +87,7 @@ module Trainer =
             assert(
                 reachProbs
                     |> Vector.forall (fun prob ->
-                        prob >= 0f && prob <= 1f))
+                        prob >= 0.0 && prob <= 1.0))
 
                 // get current strategy for this info set
             let strategy =
@@ -142,7 +142,7 @@ module Trainer =
             utility, keyedInfoSets
 
         let reachProbs =
-            DenseVector.create numPlayers 1f
+            DenseVector.create numPlayers 1.0
         loop reachProbs game
 
     /// Updates information sets.
@@ -214,7 +214,7 @@ module Trainer =
         let utilities =
             state.UtilitySum
                 |> Vector.map (fun utility ->
-                    utility / float32 state.NumGames)
+                    utility / float state.NumGames)
         state.InfoSetMap, utilities
 
     /// Trains a two-player game using the given games.
